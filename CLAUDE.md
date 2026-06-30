@@ -64,7 +64,9 @@ A feature is **Done** only when ALL of the following are true:
 - [ ] Session note appended to `docs/session-notes/`
 - [ ] Any new ADRs created in `docs/adr/`
 - [ ] Git commit with a meaningful message on a feature branch
-- [ ] PR opened for CodeRabbit review (if applicable)
+- [ ] PR opened from `feature/<name>` → `develop` (mandatory — not optional)
+- [ ] All CodeRabbit findings addressed: valid findings fixed with commits, rejected findings replied to inline with justification
+- [ ] CodeRabbit review clean — no open threads
 
 ---
 
@@ -172,14 +174,18 @@ Never skip pre-commit hooks.
 
 ## CodeRabbit Workflow
 
-Every completed feature should be reviewed by CodeRabbit via PR:
+Every completed feature **must** go through CodeRabbit review before merging. This is not optional.
 
-1. Open PR from `feature/<name>` → `develop`
-2. CodeRabbit will post inline review comments
-3. Address all accepted findings with commits
-4. For any rejected findings: add a comment explaining why
-5. After review is clean: merge and update docs
-6. Document any lessons learned in `wiki/lessons-learned.md`
+Claude must proactively open the PR immediately after the final feature commit — do not wait to be asked.
+
+1. Open PR from `feature/<name>` → `develop` using `gh pr create` right after the final commit
+2. Wait for CodeRabbit to post inline review comments (typically 2–5 minutes)
+3. For each finding, decide:
+   - **Valid** → apply the fix with a commit on the feature branch and push
+   - **Rejected** → reply to the inline comment on GitHub with a clear justification (e.g. "out of scope for this feature", "contradicts ADR-001", "intentional design decision because…")
+4. Do not consider the review done until all threads are resolved or explicitly replied to
+5. Merge `feature/<name>` into `develop` once CodeRabbit is clean
+6. Document any new lessons learned in `wiki/lessons-learned.md`
 
 ---
 
