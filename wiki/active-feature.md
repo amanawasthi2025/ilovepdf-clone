@@ -380,9 +380,9 @@ No open questions remain that block implementation.
 | 011 | Planning, ADR-003 & Acceptance Criteria | COMPLETE ✅ |
 | 012 | Split API (`POST /api/split/jobs`, validation) | COMPLETE ✅ |
 | 013 | Worker: pdf-lib Split Processor + jszip Archive | COMPLETE ✅ |
-| 014 | Frontend: `/split` Upload, Polling & Download UI | NOT STARTED |
+| 014 | Frontend: `/split` Upload, Polling & Download UI | COMPLETE ✅ |
 | 015 | E2E Tests, Polish & Definition of Done | NOT STARTED |
 
 ---
 
-*Last updated: 2026-07-01 — Session 013 (Worker Split Processor)*
+*Last updated: 2026-07-01 — Session 014 (Frontend Split UI)*

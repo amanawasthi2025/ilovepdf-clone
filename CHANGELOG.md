@@ -11,6 +11,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (PDF Split — In Progress 🚧)
 
+**Session 014 — Frontend: `/split` Upload, Polling & Download UI (2026-07-01)**
+- `apps/web/app/split/page.tsx` — `/split` route; client component implementing the IDLE → UPLOADING → PROCESSING → DONE/ERROR state machine from `wiki/active-feature.md`
+- Single-file dropzone via `react-dropzone` (`multiple: false`); accepts `application/pdf` only; 50 MB cap enforced at drop time with inline error messages; selected file shown with filename, formatted size, and a remove (×) button
+- Page-ranges text input with inline client-side syntax validation (`^\d+-\d+(,\d+-\d+)*$`); Split button disabled until a file is selected and ranges syntax is valid
+- PROCESSING state: spinner with range count ("Creating N PDFs"); reuses the TanStack Query polling pattern from Merge (`refetchInterval: 2000`, stops on `COMPLETED`/`FAILED`)
+- DONE state: success message, "Download ZIP" button (fetches pre-signed URL, triggers browser download), "Split another PDF" resets to IDLE
+- ERROR state: shows `errorMessage` from a failed job or a generic fallback; "Try again" resets to IDLE
+- On API error during UPLOADING, returns to IDLE with an error banner without clearing the selected file (covers `RANGE_OUT_OF_BOUNDS`, which can only be caught server-side)
+- `apps/web/app/split/validation.ts` — `formatBytes()`, `MAX_FILE_SIZE_BYTES`, `isValidRangesSyntax()`; `apps/web/app/split/validation.test.ts` — 16 unit tests
+- Manually verified against a running local stack with Playwright: happy path (valid ranges → DONE → downloaded ZIP with correct page counts per range) and the `RANGE_OUT_OF_BOUNDS` error path (error banner shown, selected file retained, button returns to IDLE)
+- Formal acceptance-criteria sign-off deferred to Session 015 (E2E Tests, Polish & Definition of Done), same pattern as Merge's Session 010
+
 **Session 013 — Worker: pdf-lib Split Processor + jszip Archive (2026-07-01)**
 - `apps/worker/src/jobs/split.ts` — `processSplitJob()`: downloads the single input PDF from MinIO, validates magic bytes, parses the already-validated `ranges` string, builds one `PDFDocument` per range via pdf-lib, archives all outputs into a ZIP with `jszip` (ADR-003) named `split-<start>-<end>.pdf`, uploads the ZIP, updates job status to COMPLETED or FAILED
 - `apps/worker/src/jobs/split.test.ts` — 5 unit tests (page-index extraction per range + ZIP entry naming, magic-bytes failure, pdf-lib load failure, MinIO upload failure, ZIP generation failure)
