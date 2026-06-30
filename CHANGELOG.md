@@ -7,15 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [Unreleased]
+## [0.1.0] — 2026-06-30
 
-### Added (PDF Merge — in progress)
+### Added (PDF Merge — Complete ✅)
+
+**Session 010 — E2E Tests, Polish & Definition of Done (2026-06-30)**
+- `apps/web/playwright.config.ts` — Playwright config targeting `http://localhost:3000`; Chromium only; `acceptDownloads: true`; 120 s test timeout, 60 s assertion timeout
+- `apps/web/e2e/tsconfig.json` — separate TypeScript config for e2e tests (CommonJS, `moduleResolution: node`)
+- `apps/web/e2e/merge.spec.ts` — Playwright E2E test covering the full upload → poll → download flow: generates two valid PDFs with pdf-lib, uploads via the react-dropzone hidden input, waits for PROCESSING then DONE state, captures the browser download, verifies the file begins with `%PDF`, and confirms "Merge more PDFs" resets to IDLE
+- `apps/web/tsconfig.json` — added `e2e` to `exclude` so E2E test files are not included in `tsc --noEmit`
+- `"test:e2e": "playwright test"` script added to `apps/web/package.json`
+- All 36 acceptance criteria verified; 25 Vitest unit/integration tests passing; `typecheck` and `lint` clean
 
 **Session 002 — Planning & ADRs (2026-06-30)**
 - `wiki/active-feature.md` — complete PDF Merge spec (file constraints, job lifecycle, 3 API contracts, worker spec, frontend state machine, 36 ACs)
 - `docs/adr/001-pdf-processing-library.md` — Decision: pdf-lib (rejected Ghostscript, PyPDF2, MuPDF)
 - `docs/adr/002-monorepo-structure.md` — Decision: Turborepo (rejected separate repos, Nx)
 - 9-session implementation breakdown (Sessions 002–010)
+
+---
 
 **Session 003 — Monorepo Scaffolding (2026-06-30)**
 - Turborepo monorepo with `apps/web`, `apps/worker`, `packages/shared`

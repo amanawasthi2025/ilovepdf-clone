@@ -7,10 +7,11 @@
 
 ## Current Feature: PDF Merge
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE ✅
 **Started:** 2026-06-30
+**Completed:** 2026-06-30
 **Branch:** `feature/pdf-merge`
-**Planned sessions:** 002 (planning) → 003–010 (implementation)
+**Sessions:** 002 (planning) → 003–010 (implementation)
 
 ---
 
@@ -298,54 +299,54 @@ The feature is Done when **all** of the following are verified:
 
 ### Upload
 
-- [ ] AC-01: User can drag-and-drop 2 PDF files onto the dropzone and see them in the file list
-- [ ] AC-02: User can click the dropzone to open a file browser and select PDFs
-- [ ] AC-03: User can upload up to 10 files
-- [ ] AC-04: Each file in the list shows its filename and formatted size
-- [ ] AC-05: User can remove a file from the list by clicking the remove button
-- [ ] AC-06: User can reorder files in the list before submission
-- [ ] AC-07: Merge button is disabled when fewer than 2 files are in the list
-- [ ] AC-08: Merge button is enabled when 2 or more files are in the list
-- [ ] AC-09: Dragging a non-PDF file onto the dropzone shows an error and rejects the file
-- [ ] AC-10: Selecting a file over 50MB shows an error and rejects the file
-- [ ] AC-11: Attempting to add an 11th file is rejected with an inline message
+- [x] AC-01: User can drag-and-drop 2 PDF files onto the dropzone and see them in the file list
+- [x] AC-02: User can click the dropzone to open a file browser and select PDFs
+- [x] AC-03: User can upload up to 10 files
+- [x] AC-04: Each file in the list shows its filename and formatted size
+- [x] AC-05: User can remove a file from the list by clicking the remove button
+- [x] AC-06: User can reorder files in the list before submission
+- [x] AC-07: Merge button is disabled when fewer than 2 files are in the list
+- [x] AC-08: Merge button is enabled when 2 or more files are in the list
+- [x] AC-09: Dragging a non-PDF file onto the dropzone shows an error and rejects the file
+- [x] AC-10: Selecting a file over 50MB shows an error and rejects the file
+- [x] AC-11: Attempting to add an 11th file is rejected with an inline message
 
 ### Processing & Download
 
-- [ ] AC-12: Clicking Merge submits files to `POST /api/merge/jobs` and receives a `jobId`
-- [ ] AC-13: After submission, the page shows a "Merging…" processing state
-- [ ] AC-14: The processing state polls the status endpoint every 2 seconds
-- [ ] AC-15: When the job completes, the page transitions to the DONE state
-- [ ] AC-16: The DONE state shows a Download button
-- [ ] AC-17: Clicking Download triggers a browser file download
-- [ ] AC-18: The downloaded file is a valid PDF (can be opened in a standard PDF viewer)
-- [ ] AC-19: The downloaded PDF contains all uploaded pages in the order they were arranged in the UI
-- [ ] AC-20: "Merge more PDFs" resets the page to IDLE without a page refresh
+- [x] AC-12: Clicking Merge submits files to `POST /api/merge/jobs` and receives a `jobId`
+- [x] AC-13: After submission, the page shows a "Merging…" processing state
+- [x] AC-14: The processing state polls the status endpoint every 2 seconds
+- [x] AC-15: When the job completes, the page transitions to the DONE state
+- [x] AC-16: The DONE state shows a Download button
+- [x] AC-17: Clicking Download triggers a browser file download
+- [x] AC-18: The downloaded file is a valid PDF (can be opened in a standard PDF viewer)
+- [x] AC-19: The downloaded PDF contains all uploaded pages in the order they were arranged in the UI
+- [x] AC-20: "Merge more PDFs" resets the page to IDLE without a page refresh
 
 ### Error Handling
 
-- [ ] AC-21: If the merge job fails (e.g. corrupt PDF input), the page shows the ERROR state
-- [ ] AC-22: The ERROR state shows a "Try again" button that resets to IDLE
-- [ ] AC-23: A network error during upload shows an error banner and keeps the file list intact
+- [x] AC-21: If the merge job fails (e.g. corrupt PDF input), the page shows the ERROR state
+- [x] AC-22: The ERROR state shows a "Try again" button that resets to IDLE
+- [x] AC-23: A network error during upload shows an error banner and keeps the file list intact
 
 ### API
 
-- [ ] AC-24: `POST /api/merge/jobs` with 2 valid PDFs → 202 `{ jobId }`
-- [ ] AC-25: `POST /api/merge/jobs` with 1 file → 400 `MINIMUM_FILES_REQUIRED`
-- [ ] AC-26: `POST /api/merge/jobs` with a non-PDF → 400 `INVALID_FILE_TYPE`
-- [ ] AC-27: `GET /api/merge/jobs/:jobId/status` for COMPLETED job → `{ status: "COMPLETED" }`
-- [ ] AC-28: `GET /api/merge/jobs/:jobId/status` for unknown ID → 404
-- [ ] AC-29: `GET /api/merge/jobs/:jobId/download` for COMPLETED job → `{ url }` (valid pre-signed URL)
-- [ ] AC-30: `GET /api/merge/jobs/:jobId/download` for PENDING job → 409 `JOB_NOT_COMPLETE`
-- [ ] AC-31: `GET /api/merge/jobs/:jobId/download` for unknown ID → 404
+- [x] AC-24: `POST /api/merge/jobs` with 2 valid PDFs → 202 `{ jobId }`
+- [x] AC-25: `POST /api/merge/jobs` with 1 file → 400 `MINIMUM_FILES_REQUIRED`
+- [x] AC-26: `POST /api/merge/jobs` with a non-PDF → 400 `INVALID_FILE_TYPE`
+- [x] AC-27: `GET /api/merge/jobs/:jobId/status` for COMPLETED job → `{ status: "COMPLETED" }`
+- [x] AC-28: `GET /api/merge/jobs/:jobId/status` for unknown ID → 404
+- [x] AC-29: `GET /api/merge/jobs/:jobId/download` for COMPLETED job → `{ url }` (valid pre-signed URL)
+- [x] AC-30: `GET /api/merge/jobs/:jobId/download` for PENDING job → 409 `JOB_NOT_COMPLETE`
+- [x] AC-31: `GET /api/merge/jobs/:jobId/download` for unknown ID → 404
 
 ### Quality
 
-- [ ] AC-32: `npm run typecheck` exits with 0 errors
-- [ ] AC-33: `npm run lint` exits with 0 errors/warnings
-- [ ] AC-34: `npm run test` passes all unit and integration tests
-- [ ] AC-35: Playwright E2E test passes: upload 2 PDFs → download merged PDF → file is a valid PDF
-- [ ] AC-36: No authentication required for any of the above flows
+- [x] AC-32: `npm run typecheck` exits with 0 errors
+- [x] AC-33: `npm run lint` exits with 0 errors/warnings
+- [x] AC-34: `npm run test` passes all unit and integration tests
+- [x] AC-35: Playwright E2E test passes: upload 2 PDFs → download merged PDF → file is a valid PDF
+- [x] AC-36: No authentication required for any of the above flows
 
 ---
 
@@ -371,15 +372,15 @@ Deployment target, domain name, and payment provider remain open but do not affe
 | Session | Title | Status |
 |---|---|---|
 | 002 | Planning, ADRs & Acceptance Criteria | COMPLETE ✅ |
-| 003 | Monorepo Scaffolding & Dev Environment | Pending |
-| 004 | Database Schema & Health Endpoint | Pending |
-| 005 | File Upload API | Pending |
+| 003 | Monorepo Scaffolding & Dev Environment | COMPLETE ✅ |
+| 004 | Database Schema & Health Endpoint | COMPLETE ✅ |
+| 005 | File Upload API | COMPLETE ✅ |
 | 006 | Worker & pdf-lib Merge Processor | COMPLETE ✅ |
-| 007 | Job Status & Download API | Pending |
-| 008 | Frontend: Upload UI | Pending |
-| 009 | Frontend: Status Polling & Download | Pending |
-| 010 | E2E Tests, Polish & Definition of Done | Pending |
+| 007 | Job Status & Download API | COMPLETE ✅ |
+| 008 | Frontend: Upload UI | COMPLETE ✅ |
+| 009 | Frontend: Status Polling & Download | COMPLETE ✅ |
+| 010 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ---
 
-*Last updated: 2026-06-30 — Session 002 (PDF Merge Planning)*
+*Last updated: 2026-06-30 — Session 010 (PDF Merge Complete)*

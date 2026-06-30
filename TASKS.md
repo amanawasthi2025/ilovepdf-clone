@@ -7,51 +7,20 @@
 
 ## Current Feature
 
-**Feature:** PDF Merge — Session 010: E2E Tests, Polish & Definition of Done
-**Status:** IN PROGRESS
-**Branch:** `feature/pdf-merge`
-**Started:** 2026-06-30
+**No active feature.** PDF Merge is complete. Awaiting approval to begin the next feature.
 
-### Description
-Write Playwright E2E test covering the full upload → poll → download flow. Verify all 36 ACs. Final typecheck, lint, and test pass across all workspaces. Update all docs to mark PDF Merge complete.
-
-### Session Breakdown
-
-| Session | Scope | Status |
-|---|---|---|
-| 002 | Planning, spec, ADRs | ✅ Complete |
-| 003 | Monorepo scaffolding, Docker Compose | ✅ Complete |
-| 004 | Database schema, Prisma, health endpoint | ✅ Complete |
-| 005 | File Upload API (`POST /api/merge/jobs`) | ✅ Complete |
-| 006 | Worker & pdf-lib merge processor | ✅ Complete |
-| 007 | Job Status & Download API | ✅ Complete |
-| 008 | Frontend Upload UI | ✅ Complete |
-| 009 | Frontend Status Polling & Download | ✅ Complete |
-| 010 | E2E Tests, Polish, Definition of Done | — |
-
-### Completed Session ACs
-
-**Session 003 ACs (all ✅):**
-- [x] `npm run typecheck` passes on all 3 workspaces
-- [x] `npm run lint` passes on all 3 workspaces
-- [x] `npm run test --passWithNoTests` passes
-- [x] `docker compose up` — all services healthy
-
-**Session 004 ACs (all ✅):**
-- [x] `prisma/schema.prisma` matches the approved spec exactly
-- [x] `npm run db:generate` succeeds without errors
-- [x] `npm run db:migrate` creates migration file and applies to PostgreSQL
-- [x] `GET /api/health` returns `{"status":"ok","database":"ok"}` when DB is reachable
-- [x] `GET /api/health` returns `{"status":"degraded","database":"error"}` (503) when DB is unreachable
-- [x] 2 unit tests pass covering both health states
-- [x] `npm run typecheck` and `npm run test` still pass
-
-### Blocked Items
-None.
+See backlog below for candidates.
 
 ---
 
 ## Previous Feature (Approved)
+
+**Feature:** PDF Merge
+**Status:** COMPLETE ✅
+**Branch:** `feature/pdf-merge`
+**Completed:** 2026-06-30
+
+---
 
 **Feature:** Project Initialization & Engineering Foundation
 **Status:** COMPLETE ✅
@@ -82,7 +51,8 @@ None.
 
 | # | Feature | Completed | Notes |
 |---|---|---|---|
-| — | — | — | None yet |
+| 0 | Project Initialization & Engineering Foundation | 2026-06-30 | Docs, stack, process only |
+| 1 | PDF Merge | 2026-06-30 | Full pipeline; 36 ACs; 25 unit tests + 1 E2E |
 
 ---
 
@@ -120,4 +90,4 @@ None.
 
 ---
 
-*Last updated: 2026-06-30 — Session 001 (Project Initialization)*
+*Last updated: 2026-06-30 — Session 010 (PDF Merge Complete)*

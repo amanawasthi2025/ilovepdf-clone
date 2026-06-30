@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useDropzone } from 'react-dropzone'
 import type { FileRejection } from 'react-dropzone'
@@ -263,7 +263,7 @@ export default function MergePage() {
   // ---------------------------------------------------------------------------
   // Status polling — active only while PROCESSING
   // ---------------------------------------------------------------------------
-  useQuery<JobStatusResponse>({
+  const { data: jobStatus } = useQuery<JobStatusResponse>({
     queryKey: ['job-status', jobId],
     enabled: phase === 'PROCESSING' && jobId !== null,
     refetchInterval: (query) => {
@@ -276,16 +276,18 @@ export default function MergePage() {
       if (!res.ok) throw new Error('Failed to fetch job status')
       return res.json() as Promise<JobStatusResponse>
     },
-    select: (data) => {
-      if (data.status === 'COMPLETED') {
-        setPhase('DONE')
-      } else if (data.status === 'FAILED') {
-        setMergeError(data.errorMessage ?? 'An unknown error occurred.')
-        setPhase('ERROR')
-      }
-      return data
-    },
   })
+
+  // Drive phase transitions in an effect so setState is never called during render
+  useEffect(() => {
+    if (!jobStatus) return
+    if (jobStatus.status === 'COMPLETED') {
+      setPhase('DONE')
+    } else if (jobStatus.status === 'FAILED') {
+      setMergeError(jobStatus.errorMessage ?? 'An unknown error occurred.')
+      setPhase('ERROR')
+    }
+  }, [jobStatus])
 
   // ---------------------------------------------------------------------------
   // PROCESSING state
