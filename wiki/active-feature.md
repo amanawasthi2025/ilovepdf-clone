@@ -7,8 +7,9 @@
 
 ## Current Feature: PDF Split
 
-**Status:** IN PROGRESS 🚧
+**Status:** COMPLETE ✅
 **Started:** 2026-07-01
+**Completed:** 2026-07-01
 **Branch:** `feature/pdf-split`
 **Sessions:** 011 (planning) → 012–015 (implementation)
 
@@ -306,56 +307,56 @@ The feature is Done when **all** of the following are verified:
 
 ### Upload
 
-- [ ] AC-01: User can drag-and-drop a PDF file onto the dropzone and see it selected
-- [ ] AC-02: User can click the dropzone to open a file browser and select a PDF
-- [ ] AC-03: Selected file shows its filename and formatted size
-- [ ] AC-04: User can remove the selected file via the remove button
-- [ ] AC-05: User can enter page ranges in the text input
-- [ ] AC-06: Split button is disabled when no file is selected
-- [ ] AC-07: Split button is disabled when ranges input is empty or malformed
-- [ ] AC-08: Split button is enabled when a valid file and syntactically valid ranges are present
-- [ ] AC-09: Dragging a non-PDF file onto the dropzone shows an error and rejects the file
-- [ ] AC-10: Selecting a file over 50MB shows an error and rejects the file
+- [x] AC-01: User can drag-and-drop a PDF file onto the dropzone and see it selected
+- [x] AC-02: User can click the dropzone to open a file browser and select a PDF
+- [x] AC-03: Selected file shows its filename and formatted size
+- [x] AC-04: User can remove the selected file via the remove button
+- [x] AC-05: User can enter page ranges in the text input
+- [x] AC-06: Split button is disabled when no file is selected
+- [x] AC-07: Split button is disabled when ranges input is empty or malformed
+- [x] AC-08: Split button is enabled when a valid file and syntactically valid ranges are present
+- [x] AC-09: Dragging a non-PDF file onto the dropzone shows an error and rejects the file
+- [x] AC-10: Selecting a file over 50MB shows an error and rejects the file
 
 ### Processing & Download
 
-- [ ] AC-11: Clicking Split submits the file and ranges to `POST /api/split/jobs` and receives a `jobId`
-- [ ] AC-12: After submission, the page shows a "Splitting…" processing state
-- [ ] AC-13: The processing state polls the status endpoint every 2 seconds
-- [ ] AC-14: When the job completes, the page transitions to the DONE state
-- [ ] AC-15: The DONE state shows a Download ZIP button
-- [ ] AC-16: Clicking Download triggers a browser file download of a `.zip` file
-- [ ] AC-17: The downloaded ZIP contains one valid PDF per requested range
-- [ ] AC-18: Each PDF in the ZIP contains exactly the pages from its corresponding range, in order
-- [ ] AC-19: "Split another PDF" resets the page to IDLE without a page refresh
+- [x] AC-11: Clicking Split submits the file and ranges to `POST /api/split/jobs` and receives a `jobId`
+- [x] AC-12: After submission, the page shows a "Splitting…" processing state
+- [x] AC-13: The processing state polls the status endpoint every 2 seconds
+- [x] AC-14: When the job completes, the page transitions to the DONE state
+- [x] AC-15: The DONE state shows a Download ZIP button
+- [x] AC-16: Clicking Download triggers a browser file download of a `.zip` file
+- [x] AC-17: The downloaded ZIP contains one valid PDF per requested range
+- [x] AC-18: Each PDF in the ZIP contains exactly the pages from its corresponding range, in order
+- [x] AC-19: "Split another PDF" resets the page to IDLE without a page refresh
 
 ### Error Handling
 
-- [ ] AC-20: Submitting a range whose `end` exceeds the PDF's page count returns `400 RANGE_OUT_OF_BOUNDS` and the UI shows an error banner without losing the selected file
-- [ ] AC-21: If the split job fails after being queued (e.g. corrupted PDF), the page shows the ERROR state
-- [ ] AC-22: The ERROR state shows a "Try again" button that resets to IDLE
-- [ ] AC-23: A network error during upload shows an error banner and keeps the selected file intact
+- [x] AC-20: Submitting a range whose `end` exceeds the PDF's page count returns `400 RANGE_OUT_OF_BOUNDS` and the UI shows an error banner without losing the selected file
+- [x] AC-21: If the split job fails after being queued (e.g. corrupted PDF), the page shows the ERROR state
+- [x] AC-22: The ERROR state shows a "Try again" button that resets to IDLE
+- [x] AC-23: A network error during upload shows an error banner and keeps the selected file intact
 
 ### API
 
-- [ ] AC-24: `POST /api/split/jobs` with a valid PDF and valid ranges → 202 `{ jobId }`
-- [ ] AC-25: `POST /api/split/jobs` with no file → 400 `FILE_REQUIRED`
-- [ ] AC-26: `POST /api/split/jobs` with a non-PDF → 400 `INVALID_FILE_TYPE`
-- [ ] AC-27: `POST /api/split/jobs` with malformed ranges syntax → 400 `INVALID_RANGE_FORMAT`
-- [ ] AC-28: `POST /api/split/jobs` with an out-of-bounds range → 400 `RANGE_OUT_OF_BOUNDS`
-- [ ] AC-29: `GET /api/split/jobs/:jobId/status` for COMPLETED job → `{ status: "COMPLETED" }`
-- [ ] AC-30: `GET /api/split/jobs/:jobId/status` for unknown ID → 404
-- [ ] AC-31: `GET /api/split/jobs/:jobId/download` for COMPLETED job → `{ url }` (valid pre-signed URL)
-- [ ] AC-32: `GET /api/split/jobs/:jobId/download` for PENDING job → 409 `JOB_NOT_COMPLETE`
-- [ ] AC-33: `GET /api/split/jobs/:jobId/download` for unknown ID → 404
+- [x] AC-24: `POST /api/split/jobs` with a valid PDF and valid ranges → 202 `{ jobId }`
+- [x] AC-25: `POST /api/split/jobs` with no file → 400 `FILE_REQUIRED`
+- [x] AC-26: `POST /api/split/jobs` with a non-PDF → 400 `INVALID_FILE_TYPE`
+- [x] AC-27: `POST /api/split/jobs` with malformed ranges syntax → 400 `INVALID_RANGE_FORMAT`
+- [x] AC-28: `POST /api/split/jobs` with an out-of-bounds range → 400 `RANGE_OUT_OF_BOUNDS`
+- [x] AC-29: `GET /api/split/jobs/:jobId/status` for COMPLETED job → `{ status: "COMPLETED" }`
+- [x] AC-30: `GET /api/split/jobs/:jobId/status` for unknown ID → 404
+- [x] AC-31: `GET /api/split/jobs/:jobId/download` for COMPLETED job → `{ url }` (valid pre-signed URL)
+- [x] AC-32: `GET /api/split/jobs/:jobId/download` for PENDING job → 409 `JOB_NOT_COMPLETE`
+- [x] AC-33: `GET /api/split/jobs/:jobId/download` for unknown ID → 404
 
 ### Quality
 
-- [ ] AC-34: `npm run typecheck` exits with 0 errors
-- [ ] AC-35: `npm run lint` exits with 0 errors/warnings
-- [ ] AC-36: `npm run test` passes all unit and integration tests
-- [ ] AC-37: Playwright E2E test passes: upload 1 PDF with valid ranges → download ZIP → all entries are valid PDFs with correct page counts
-- [ ] AC-38: No authentication required for any of the above flows
+- [x] AC-34: `npm run typecheck` exits with 0 errors
+- [x] AC-35: `npm run lint` exits with 0 errors/warnings
+- [x] AC-36: `npm run test` passes all unit and integration tests
+- [x] AC-37: Playwright E2E test passes: upload 1 PDF with valid ranges → download ZIP → all entries are valid PDFs with correct page counts
+- [x] AC-38: No authentication required for any of the above flows
 
 ---
 
@@ -381,8 +382,8 @@ No open questions remain that block implementation.
 | 012 | Split API (`POST /api/split/jobs`, validation) | COMPLETE ✅ |
 | 013 | Worker: pdf-lib Split Processor + jszip Archive | COMPLETE ✅ |
 | 014 | Frontend: `/split` Upload, Polling & Download UI | COMPLETE ✅ |
-| 015 | E2E Tests, Polish & Definition of Done | NOT STARTED |
+| 015 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ---
 
-*Last updated: 2026-07-01 — Session 014 (Frontend Split UI)*
+*Last updated: 2026-07-01 — Session 015 (E2E Tests, Polish & Definition of Done)*

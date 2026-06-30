@@ -7,9 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [Unreleased]
+## [0.2.0] — 2026-07-01
 
-### Added (PDF Split — In Progress 🚧)
+### Added (PDF Split — Complete ✅)
+
+**Session 015 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/split.spec.ts` — 3 Playwright E2E tests: full happy-path flow (upload 10-page PDF → ranges `1-3,4-6,7-10` → DONE → download ZIP → verify 3 entries with correct page counts via pdf-lib → reset to IDLE), `RANGE_OUT_OF_BOUNDS` error banner path, and AC-21 (job FAILED after being queued → ERROR state → "Try again" resets to IDLE)
+- AC-21 verification note: a corrupted PDF cannot reach the worker as a post-queue failure, because `POST /api/split/jobs` runs the identical magic-bytes + pdf-lib load check the worker runs, rejecting corrupt files with `400` before a job is ever enqueued (the worker-side FAILED unit tests in `split.test.ts` already cover that path). The E2E test instead seeds a `FAILED` job directly via Prisma and intercepts the upload POST to point at it, exercising the real `GET /status` route and the page's real polling/ERROR-state/reset code — the part of AC-21 that actually lives in this app
+- Full 38-item acceptance criteria checklist in `wiki/active-feature.md` walked and verified (dropzone/validation/state-machine via code + existing unit tests, API contracts via `route.test.ts` suites, worker FAILED handling via `split.test.ts`, happy/error/AC-21 paths via the new E2E tests)
+- Final quality gates: `npm run typecheck` (0 errors, 3 workspaces), `npm run lint` (0 errors/warnings, 3 workspaces), `npm run test` (75/75 — 9 worker, 66 web), `npx playwright test` (4/4 — 1 merge, 3 split)
 
 **Session 014 — Frontend: `/split` Upload, Polling & Download UI (2026-07-01)**
 - `apps/web/app/split/page.tsx` — `/split` route; client component implementing the IDLE → UPLOADING → PROCESSING → DONE/ERROR state machine from `wiki/active-feature.md`

@@ -7,10 +7,16 @@
 
 ## Current Feature
 
+None — PDF Split is complete and awaiting the next feature to be approved per the One-Feature-at-a-Time rule.
+
+---
+
+## Previous Feature (Approved)
+
 **Feature:** PDF Split
-**Status:** IN PROGRESS 🚧
+**Status:** COMPLETE ✅
 **Branch:** `feature/pdf-split`
-**Started:** 2026-07-01
+**Completed:** 2026-07-01
 **Spec:** `wiki/active-feature.md`
 
 ### Description
@@ -23,17 +29,15 @@ Allow a user to upload a single PDF and a set of custom page ranges, split it in
 | 012 | Split API (`POST /api/split/jobs`, validation) | COMPLETE ✅ |
 | 013 | Worker: pdf-lib Split Processor + jszip Archive | COMPLETE ✅ |
 | 014 | Frontend: `/split` Upload, Polling & Download UI | COMPLETE ✅ |
-| 015 | E2E Tests, Polish & Definition of Done | NOT STARTED |
+| 015 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ### Acceptance Criteria
-See the full 38-criteria list in `wiki/active-feature.md`.
+All 38 criteria verified — see `wiki/active-feature.md`.
 
 ### Blocked Items
 None.
 
 ---
-
-## Previous Feature (Approved)
 
 **Feature:** PDF Merge
 **Status:** COMPLETE ✅
@@ -73,6 +77,7 @@ None.
 |---|---|---|---|
 | 0 | Project Initialization & Engineering Foundation | 2026-06-30 | Docs, stack, process only |
 | 1 | PDF Merge | 2026-06-30 | Full pipeline; 36 ACs; 25 unit tests + 1 E2E |
+| 2 | PDF Split | 2026-07-01 | Custom ranges, ZIP output; 38 ACs; 75 unit tests + 4 E2E |
 
 ---
 
@@ -110,4 +115,4 @@ None.
 
 ---
 
-*Last updated: 2026-07-01 — Session 014 (Frontend Split UI)*
+*Last updated: 2026-07-01 — Session 015 (PDF Split Complete)*
