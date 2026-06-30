@@ -52,6 +52,12 @@ Add entries after completing a feature, resolving a production issue, or complet
 **Lesson:** Don't assume a status-check bot is providing what a branch protection rule asks for; check the actual review `state`, not just that the bot ran. Required-approval rules and required-status-check rules are enforced differently (and admins can bypass the former but not, by default, the latter) — verify both before assuming a PR can merge cleanly through the API.
 **Applies to:** workflow, DX
 
+### 2026-06-30 — `COPY . .` without `.dockerignore` silently re-imports the host's build artifacts
+**Context:** Manually verifying PDF Split end-to-end via `docker compose up`, ahead of starting the next feature.
+**What happened:** Neither `Dockerfile.web` nor `Dockerfile.worker` had a `.dockerignore`. `RUN npm install` correctly produced an Alpine-native (`musl`) `node_modules`, but the following `COPY . .` overwrote it with the host's `node_modules` — including a Prisma client built for the host's glibc and `packages/shared/dist` built on the host. The container booted but every DB-touching route 503'd with a Prisma engine mismatch, and `/api/split/jobs` 500'd with `Module not found: @ilovepdf/shared` once the dockerignore fix removed the accidental host copy. Three separate fixes were needed together: add `.dockerignore` (exclude `node_modules`, `.git`, `.next`, `dist`), add `RUN npx prisma generate` after `COPY . .` (schema didn't exist at `npm install` time, so Prisma's postinstall hook had nothing to read), add `openssl` to `apk add` (Alpine lacked it, so Prisma's musl engine detection at generate-time silently picked the wrong binary target), and add `RUN npm run build --workspace=@ilovepdf/shared` (its `dist/` is gitignored, so it must be compiled in-image, not inherited from the host).
+**Lesson:** A monorepo Dockerfile that does `COPY . .` after `npm install` needs a `.dockerignore` from day one — without it, the image silently runs on a mix of container-built and host-built artifacts that happens to "work" until a platform-specific binary (a native addon, a Prisma engine) is involved, then fails in a way that looks like an application bug. Test `docker compose up --build` from a clean state (or at least reason about what `COPY . .` actually copies) before trusting a containerized dev environment.
+**Applies to:** DX, developer experience, infrastructure
+
 ---
 
 ## Categories to Watch
