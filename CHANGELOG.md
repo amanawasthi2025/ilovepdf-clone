@@ -26,6 +26,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dev Dockerfiles for web and worker
 - Vitest configured for both apps
 
+**Session 009 — Frontend Status Polling & Download (2026-06-30)**
+- `app/providers.tsx` — `'use client'` `QueryClientProvider` wrapper; `retry: false`, `staleTime: 0`
+- `app/layout.tsx` — wraps `<body>` children with `<Providers>` for app-wide TanStack Query access
+- `app/merge/page.tsx` — replaced PROCESSING stub with TanStack Query `useQuery` polling `GET /api/merge/jobs/:jobId/status` every 2 seconds; polling stops automatically on `COMPLETED` or `FAILED`
+- DONE state: success checkmark, "Your PDFs have been merged successfully", download button (calls `GET /api/merge/jobs/:jobId/download` → pre-signed URL → browser download), "Merge more PDFs" link resets to IDLE
+- ERROR state: error icon, "Merge failed", `errorMessage` from API or generic fallback, "Try again" button resets to IDLE
+- Phase type expanded: `'IDLE' | 'UPLOADING' | 'PROCESSING' | 'DONE' | 'ERROR'`
+
 **Session 008 — Frontend Upload UI (2026-06-30)**
 - `app/merge/page.tsx` — `/merge` route; client component with IDLE → UPLOADING → PROCESSING state machine
 - Dropzone: drag-and-drop + click-to-browse via `react-dropzone`; accepts `application/pdf` only; 50 MB per-file cap enforced at drop time with inline error messages

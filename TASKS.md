@@ -7,13 +7,13 @@
 
 ## Current Feature
 
-**Feature:** PDF Merge — Session 009: Frontend Status Polling & Download
+**Feature:** PDF Merge — Session 010: E2E Tests, Polish & Definition of Done
 **Status:** IN PROGRESS
 **Branch:** `feature/pdf-merge`
 **Started:** 2026-06-30
 
 ### Description
-Replace the PROCESSING stub with TanStack Query polling of `GET /api/merge/jobs/:jobId/status`, and implement the DONE (download button) and ERROR (try again) states.
+Write Playwright E2E test covering the full upload → poll → download flow. Verify all 36 ACs. Final typecheck, lint, and test pass across all workspaces. Update all docs to mark PDF Merge complete.
 
 ### Session Breakdown
 
@@ -26,7 +26,7 @@ Replace the PROCESSING stub with TanStack Query polling of `GET /api/merge/jobs/
 | 006 | Worker & pdf-lib merge processor | ✅ Complete |
 | 007 | Job Status & Download API | ✅ Complete |
 | 008 | Frontend Upload UI | ✅ Complete |
-| 009 | Frontend Status Polling & Download | — |
+| 009 | Frontend Status Polling & Download | ✅ Complete |
 | 010 | E2E Tests, Polish, Definition of Done | — |
 
 ### Completed Session ACs

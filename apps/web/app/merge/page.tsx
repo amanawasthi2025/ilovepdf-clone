@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useDropzone } from 'react-dropzone'
 import type { FileRejection } from 'react-dropzone'
 import {
@@ -36,7 +37,15 @@ type Rejection = {
   error: string
 }
 
-type Phase = 'IDLE' | 'UPLOADING' | 'PROCESSING'
+type Phase = 'IDLE' | 'UPLOADING' | 'PROCESSING' | 'DONE' | 'ERROR'
+
+type JobStatusResponse = {
+  jobId: string
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+  createdAt: string
+  updatedAt: string
+  errorMessage: string | null
+}
 
 // ---------------------------------------------------------------------------
 // SortableFileRow
@@ -143,6 +152,7 @@ export default function MergePage() {
   const [phase, setPhase] = useState<Phase>('IDLE')
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
+  const [mergeError, setMergeError] = useState<string | null>(null)
 
   const isIdle = phase === 'IDLE'
 
@@ -251,16 +261,39 @@ export default function MergePage() {
   }
 
   // ---------------------------------------------------------------------------
-  // PROCESSING state — Session 009 will replace this with polling + DONE/ERROR UI
+  // Status polling — active only while PROCESSING
   // ---------------------------------------------------------------------------
-  if (phase === 'PROCESSING' && jobId) {
+  useQuery<JobStatusResponse>({
+    queryKey: ['job-status', jobId],
+    enabled: phase === 'PROCESSING' && jobId !== null,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      if (status === 'COMPLETED' || status === 'FAILED') return false
+      return 2000
+    },
+    queryFn: async () => {
+      const res = await fetch(`/api/merge/jobs/${jobId}/status`)
+      if (!res.ok) throw new Error('Failed to fetch job status')
+      return res.json() as Promise<JobStatusResponse>
+    },
+    select: (data) => {
+      if (data.status === 'COMPLETED') {
+        setPhase('DONE')
+      } else if (data.status === 'FAILED') {
+        setMergeError(data.errorMessage ?? 'An unknown error occurred.')
+        setPhase('ERROR')
+      }
+      return data
+    },
+  })
+
+  // ---------------------------------------------------------------------------
+  // PROCESSING state
+  // ---------------------------------------------------------------------------
+  if (phase === 'PROCESSING') {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-4">
-        <svg
-          className="h-10 w-10 animate-spin text-blue-500"
-          viewBox="0 0 24 24"
-          fill="none"
-        >
+        <svg className="h-10 w-10 animate-spin text-blue-500" viewBox="0 0 24 24" fill="none">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
@@ -268,6 +301,92 @@ export default function MergePage() {
         <p className="text-sm text-gray-400">
           Combining {files.length} PDF{files.length !== 1 ? 's' : ''}
         </p>
+      </main>
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // DONE state
+  // ---------------------------------------------------------------------------
+  if (phase === 'DONE' && jobId) {
+    const handleDownload = async () => {
+      const res = await fetch(`/api/merge/jobs/${jobId}/download`)
+      if (!res.ok) return
+      const { url } = (await res.json()) as { url: string }
+      const a = document.createElement('a')
+      a.href = url
+      a.download = ''
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    }
+
+    const resetToIdle = () => {
+      setFiles([])
+      setJobId(null)
+      setMergeError(null)
+      setPhase('IDLE')
+    }
+
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+          <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Your PDFs have been merged successfully</h2>
+        <p className="text-sm text-gray-400">Your file will be available for download for 1 hour.</p>
+        <button
+          type="button"
+          onClick={handleDownload}
+          className="flex items-center gap-2 rounded-xl bg-blue-600 px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-blue-700"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Download merged PDF
+        </button>
+        <button
+          type="button"
+          onClick={resetToIdle}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Merge more PDFs
+        </button>
+      </main>
+    )
+  }
+
+  // ---------------------------------------------------------------------------
+  // ERROR state
+  // ---------------------------------------------------------------------------
+  if (phase === 'ERROR') {
+    const resetToIdle = () => {
+      setFiles([])
+      setJobId(null)
+      setMergeError(null)
+      setPhase('IDLE')
+    }
+
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+          <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Merge failed</h2>
+        <p className="text-sm text-gray-500">
+          {mergeError ?? 'Something went wrong while processing your files.'}
+        </p>
+        <button
+          type="button"
+          onClick={resetToIdle}
+          className="rounded-xl bg-gray-900 px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-gray-700"
+        >
+          Try again
+        </button>
       </main>
     )
   }
