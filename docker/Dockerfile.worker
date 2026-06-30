@@ -1,0 +1,21 @@
+# Development Dockerfile for apps/worker.
+# Installs all workspace dependencies and runs the worker via tsx (no compile step).
+# Production multi-stage build will be added when deploying.
+FROM node:20-alpine
+RUN apk add --no-cache libc6-compat
+
+WORKDIR /app
+
+# Copy workspace manifests so npm can resolve the dependency graph.
+COPY package*.json ./
+COPY apps/web/package.json ./apps/web/
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/shared/package.json ./packages/shared/
+
+RUN npm install
+
+# Copy full source after install to leverage layer caching on re-builds.
+COPY . .
+
+WORKDIR /app/apps/worker
+CMD ["npx", "tsx", "src/index.ts"]
