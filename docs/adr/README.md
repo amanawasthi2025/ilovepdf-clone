@@ -26,7 +26,8 @@ Do NOT write an ADR for:
 
 | # | Title | Status | Date |
 |---|---|---|---|
-| — | *(No ADRs yet)* | — | — |
+| 001 | [PDF Processing Library](001-pdf-processing-library.md) | Accepted | 2026-06-30 |
+| 002 | [Monorepo Structure](002-monorepo-structure.md) | Accepted | 2026-06-30 |
 
 ---
 
