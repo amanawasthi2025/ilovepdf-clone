@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Added (PDF Split — In Progress 🚧)
+
+**Session 011 — Planning, ADR-003 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — complete PDF Split spec (page-range constraints, job lifecycle, 3 API contracts, worker spec including ZIP step, frontend state machine, 38 ACs)
+- `docs/adr/003-zip-archive-library.md` — Decision: jszip (rejected archiver, adm-zip)
+- `prisma/schema.prisma` — added `SPLIT` to `JobType` enum, added `Job.splitRanges: String?`; migration `20260630190347_add_split_job_type` applied
+- `packages/shared/src/types/job.ts` — added `JobType.SPLIT` and `SplitJobPayload` type
+- 5-session implementation breakdown (Sessions 011–015)
+
+---
+
 ## [0.1.0] — 2026-06-30
 
 ### Added (PDF Merge — Complete ✅)

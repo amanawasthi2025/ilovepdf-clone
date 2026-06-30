@@ -7,9 +7,29 @@
 
 ## Current Feature
 
-**No active feature.** PDF Merge is complete. Awaiting approval to begin the next feature.
+**Feature:** PDF Split
+**Status:** IN PROGRESS 🚧
+**Branch:** `feature/pdf-split`
+**Started:** 2026-07-01
+**Spec:** `wiki/active-feature.md`
 
-See backlog below for candidates.
+### Description
+Allow a user to upload a single PDF and a set of custom page ranges, split it into one PDF per range, package the results into a ZIP archive, and download it. No authentication required. Reuses the full pipeline established by PDF Merge.
+
+### Session Breakdown
+| Session | Title | Status |
+|---|---|---|
+| 011 | Planning, ADR-003 & Acceptance Criteria | COMPLETE ✅ |
+| 012 | Split API (`POST /api/split/jobs`, validation) | NOT STARTED |
+| 013 | Worker: pdf-lib Split Processor + jszip Archive | NOT STARTED |
+| 014 | Frontend: `/split` Upload, Polling & Download UI | NOT STARTED |
+| 015 | E2E Tests, Polish & Definition of Done | NOT STARTED |
+
+### Acceptance Criteria
+See the full 38-criteria list in `wiki/active-feature.md`.
+
+### Blocked Items
+None.
 
 ---
 
@@ -90,4 +110,4 @@ None.
 
 ---
 
-*Last updated: 2026-06-30 — Session 010 (PDF Merge Complete)*
+*Last updated: 2026-07-01 — Session 011 (PDF Split Planning)*
