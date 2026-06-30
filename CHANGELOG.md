@@ -26,6 +26,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dev Dockerfiles for web and worker
 - Vitest configured for both apps
 
+**Session 006 — Worker & pdf-lib Merge Processor (2026-06-30)**
+- `apps/worker/src/lib/env.ts` — Zod-validated env config for the worker (DATABASE_URL, REDIS_URL, MINIO_*, WORKER_CONCURRENCY)
+- `apps/worker/src/lib/logger.ts` — pino logger singleton
+- `apps/worker/src/lib/storage.ts` — S3Client + `downloadFile()` + `uploadFile()`
+- `apps/worker/src/lib/db.ts` — Prisma singleton
+- `apps/worker/src/jobs/merge.ts` — `processMergeJob()`: downloads PDFs from MinIO, validates magic bytes, merges with pdf-lib, uploads output, updates job status to COMPLETED or FAILED
+- `apps/worker/src/jobs/merge.test.ts` — 4 unit tests (happy path + magic bytes failure + pdf-lib error + upload error)
+- `apps/worker/src/index.ts` — BullMQ Worker wiring with concurrency, SIGTERM/SIGINT graceful shutdown
+- `packages/shared/package.json` — updated exports to use compiled dist (enables NodeNext module resolution for the worker)
+
 **Session 004 — Database Schema & Health Endpoint (2026-06-30)**
 - `prisma/schema.prisma` — Job model with all fields from spec
 - `apps/web/lib/db.ts` — Prisma singleton + `checkDatabaseConnection()` helper

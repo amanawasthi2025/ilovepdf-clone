@@ -6,9 +6,6 @@
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
     "rootDir": "./src",
-    "paths": {
-      "@ilovepdf/shared": ["../../packages/shared/src/index.ts"]
-    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

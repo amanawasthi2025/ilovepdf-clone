@@ -7,13 +7,13 @@
 
 ## Current Feature
 
-**Feature:** PDF Merge — Session 005: File Upload API
+**Feature:** PDF Merge — Session 007: Job Status & Download API
 **Status:** IN PROGRESS
 **Branch:** `feature/pdf-merge`
 **Started:** 2026-06-30
 
 ### Description
-Implement `POST /api/merge/jobs` — a multipart file upload endpoint that validates PDF files, stores them in MinIO, creates a Job record in PostgreSQL, and enqueues a BullMQ merge job.
+Implement `GET /api/merge/jobs/:jobId/status` and `GET /api/merge/jobs/:jobId/download` — the status polling endpoint and pre-signed download URL endpoint.
 
 ### Session Breakdown
 
@@ -22,8 +22,8 @@ Implement `POST /api/merge/jobs` — a multipart file upload endpoint that valid
 | 002 | Planning, spec, ADRs | ✅ Complete |
 | 003 | Monorepo scaffolding, Docker Compose | ✅ Complete |
 | 004 | Database schema, Prisma, health endpoint | ✅ Complete |
-| 005 | File Upload API (`POST /api/merge/jobs`) | 🔄 Current |
-| 006 | Worker & pdf-lib merge processor | — |
+| 005 | File Upload API (`POST /api/merge/jobs`) | ✅ Complete |
+| 006 | Worker & pdf-lib merge processor | ✅ Complete |
 | 007 | Job Status & Download API | — |
 | 008 | Frontend Upload UI | — |
 | 009 | Frontend Status Polling & Download | — |

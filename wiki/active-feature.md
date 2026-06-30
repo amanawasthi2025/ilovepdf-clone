@@ -374,7 +374,7 @@ Deployment target, domain name, and payment provider remain open but do not affe
 | 003 | Monorepo Scaffolding & Dev Environment | Pending |
 | 004 | Database Schema & Health Endpoint | Pending |
 | 005 | File Upload API | Pending |
-| 006 | Worker & pdf-lib Merge Processor | Pending |
+| 006 | Worker & pdf-lib Merge Processor | COMPLETE ✅ |
 | 007 | Job Status & Download API | Pending |
 | 008 | Frontend: Upload UI | Pending |
 | 009 | Frontend: Status Polling & Download | Pending |
