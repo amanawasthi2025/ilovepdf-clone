@@ -11,6 +11,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (PDF Split — In Progress 🚧)
 
+**Session 013 — Worker: pdf-lib Split Processor + jszip Archive (2026-07-01)**
+- `apps/worker/src/jobs/split.ts` — `processSplitJob()`: downloads the single input PDF from MinIO, validates magic bytes, parses the already-validated `ranges` string, builds one `PDFDocument` per range via pdf-lib, archives all outputs into a ZIP with `jszip` (ADR-003) named `split-<start>-<end>.pdf`, uploads the ZIP, updates job status to COMPLETED or FAILED
+- `apps/worker/src/jobs/split.test.ts` — 5 unit tests (page-index extraction per range + ZIP entry naming, magic-bytes failure, pdf-lib load failure, MinIO upload failure, ZIP generation failure)
+- `apps/worker/src/index.ts` — registers the `split` job name on the shared `document-processing` Worker alongside `merge`
+- `apps/worker/package.json` — added `jszip` as an explicit dependency
+- Manually verified end-to-end against a running local stack: real 10-page PDF split into ranges `1-3,4-6,7-10`, downloaded ZIP confirmed to contain 3 correctly-named PDFs with 3/3/4 pages respectively
+- **Fixed:** `apps/web/lib/storage.ts`'s `getPresignedDownloadUrl()` no longer hardcodes a `merged-<date>.pdf` filename (a Session 012 bug surfaced by this session's manual verification — Split downloads were getting a `.pdf` filename on what is actually a `.zip`); now takes the filename as a parameter, set per-route to `merged-<date>.pdf` (Merge) or `split-<date>.zip` (Split)
+
+**Session 012 — Split API (2026-07-01)**
+- `POST /api/split/jobs` — single-file upload + page-range validation, enqueues a `split` job on `document-processing`
+- `apps/web/lib/ranges.ts` — `parseAndValidateRanges()` pure function; 10 unit tests
+- `GET /api/split/jobs/:jobId/status` and `.../download` — copied verbatim from Merge's generic equivalents
+- `apps/web/package.json` — added `pdf-lib` as an explicit dependency
+
 **Session 011 — Planning, ADR-003 & Acceptance Criteria (2026-07-01)**
 - `wiki/active-feature.md` — complete PDF Split spec (page-range constraints, job lifecycle, 3 API contracts, worker spec including ZIP step, frontend state machine, 38 ACs)
 - `docs/adr/003-zip-archive-library.md` — Decision: jszip (rejected archiver, adm-zip)

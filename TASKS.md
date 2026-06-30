@@ -21,7 +21,7 @@ Allow a user to upload a single PDF and a set of custom page ranges, split it in
 |---|---|---|
 | 011 | Planning, ADR-003 & Acceptance Criteria | COMPLETE ✅ |
 | 012 | Split API (`POST /api/split/jobs`, validation) | COMPLETE ✅ |
-| 013 | Worker: pdf-lib Split Processor + jszip Archive | NOT STARTED |
+| 013 | Worker: pdf-lib Split Processor + jszip Archive | COMPLETE ✅ |
 | 014 | Frontend: `/split` Upload, Polling & Download UI | NOT STARTED |
 | 015 | E2E Tests, Polish & Definition of Done | NOT STARTED |
 
@@ -110,4 +110,4 @@ None.
 
 ---
 
-*Last updated: 2026-07-01 — Session 011 (PDF Split Planning)*
+*Last updated: 2026-07-01 — Session 013 (Worker Split Processor)*

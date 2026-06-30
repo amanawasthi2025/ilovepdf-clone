@@ -46,7 +46,10 @@ describe('GET /api/merge/jobs/:jobId/download', () => {
 
     expect(res.status).toBe(200)
     expect(body.url).toBe('https://storage.example.com/outputs/abc.pdf?sig=xxx')
-    expect(mockGetPresignedUrl).toHaveBeenCalledWith('outputs/abc.pdf')
+    expect(mockGetPresignedUrl).toHaveBeenCalledWith(
+      'outputs/abc.pdf',
+      expect.stringMatching(/^merged-\d{4}-\d{2}-\d{2}\.pdf$/),
+    )
   })
 
   it('returns 409 JOB_NOT_COMPLETE with current status when job is not COMPLETED', async () => {

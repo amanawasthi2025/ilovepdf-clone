@@ -50,7 +50,8 @@ export async function GET(
 
   let url: string
   try {
-    url = await getPresignedDownloadUrl(job.outputKey!)
+    const date = new Date().toISOString().slice(0, 10)
+    url = await getPresignedDownloadUrl(job.outputKey!, `merged-${date}.pdf`)
   } catch (err) {
     logger.error({ err, jobId, correlationId: job.correlationId }, 'Failed to generate pre-signed URL')
     return NextResponse.json(

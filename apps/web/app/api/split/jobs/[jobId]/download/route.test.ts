@@ -46,7 +46,10 @@ describe('GET /api/split/jobs/:jobId/download', () => {
 
     expect(res.status).toBe(200)
     expect(body.url).toBe('https://storage.example.com/outputs/abc.zip?sig=xxx')
-    expect(mockGetPresignedUrl).toHaveBeenCalledWith('outputs/abc.zip')
+    expect(mockGetPresignedUrl).toHaveBeenCalledWith(
+      'outputs/abc.zip',
+      expect.stringMatching(/^split-\d{4}-\d{2}-\d{2}\.zip$/),
+    )
   })
 
   it('returns 409 JOB_NOT_COMPLETE with current status when job is not COMPLETED', async () => {
