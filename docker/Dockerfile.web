@@ -1,0 +1,24 @@
+# Development Dockerfile for apps/web.
+# Installs all workspace dependencies and runs Next.js in dev mode.
+# Production multi-stage build will be added when deploying.
+FROM node:20-alpine
+RUN apk add --no-cache libc6-compat curl
+
+WORKDIR /app
+
+# Copy workspace manifests so npm can resolve the dependency graph.
+COPY package*.json ./
+COPY apps/web/package.json ./apps/web/
+COPY apps/worker/package.json ./apps/worker/
+COPY packages/shared/package.json ./packages/shared/
+
+RUN npm install
+
+# Copy full source after install to leverage layer caching on re-builds.
+COPY . .
+
+EXPOSE 3000
+ENV NEXT_TELEMETRY_DISABLED=1
+
+WORKDIR /app/apps/web
+CMD ["npx", "next", "dev"]

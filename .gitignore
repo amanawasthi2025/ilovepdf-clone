@@ -48,6 +48,12 @@ Thumbs.db
 # Turborepo
 .turbo/
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Next.js auto-generated type reference (regenerated on every build)
+apps/web/next-env.d.ts
+
 # Prisma
 prisma/*.db
 prisma/*.db-journal
