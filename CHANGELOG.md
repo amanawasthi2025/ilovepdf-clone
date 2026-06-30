@@ -26,6 +26,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dev Dockerfiles for web and worker
 - Vitest configured for both apps
 
+**Session 007 — Job Status & Download API (2026-06-30)**
+- `GET /api/merge/jobs/:jobId/status` — polls job status from PostgreSQL; returns `{ jobId, status, createdAt, updatedAt, errorMessage }` or 404 `JOB_NOT_FOUND`
+- `GET /api/merge/jobs/:jobId/download` — issues a 5-minute pre-signed MinIO URL for COMPLETED jobs; returns 409 `JOB_NOT_COMPLETE` (with current status) for non-COMPLETED jobs, 404 `JOB_NOT_FOUND` for unknown IDs
+- `apps/web/lib/storage.ts` — added `getPresignedDownloadUrl()` using `@aws-sdk/s3-request-presigner`; sets `Content-Disposition: attachment; filename="merged-YYYY-MM-DD.pdf"` via `ResponseContentDisposition`
+- 7 new unit tests (3 for status endpoint, 4 for download endpoint); total web test count: 16
+
 **Session 006 — Worker & pdf-lib Merge Processor (2026-06-30)**
 - `apps/worker/src/lib/env.ts` — Zod-validated env config for the worker (DATABASE_URL, REDIS_URL, MINIO_*, WORKER_CONCURRENCY)
 - `apps/worker/src/lib/logger.ts` — pino logger singleton

@@ -7,13 +7,13 @@
 
 ## Current Feature
 
-**Feature:** PDF Merge — Session 007: Job Status & Download API
+**Feature:** PDF Merge — Session 008: Frontend Upload UI
 **Status:** IN PROGRESS
 **Branch:** `feature/pdf-merge`
 **Started:** 2026-06-30
 
 ### Description
-Implement `GET /api/merge/jobs/:jobId/status` and `GET /api/merge/jobs/:jobId/download` — the status polling endpoint and pre-signed download URL endpoint.
+Build the `/merge` page upload UI: dropzone, file list with reorder/remove, client-side validation, and the UPLOADING state. Covers AC-01 through AC-11 and the upload half of AC-12.
 
 ### Session Breakdown
 
@@ -24,7 +24,7 @@ Implement `GET /api/merge/jobs/:jobId/status` and `GET /api/merge/jobs/:jobId/do
 | 004 | Database schema, Prisma, health endpoint | ✅ Complete |
 | 005 | File Upload API (`POST /api/merge/jobs`) | ✅ Complete |
 | 006 | Worker & pdf-lib merge processor | ✅ Complete |
-| 007 | Job Status & Download API | — |
+| 007 | Job Status & Download API | ✅ Complete |
 | 008 | Frontend Upload UI | — |
 | 009 | Frontend Status Polling & Download | — |
 | 010 | E2E Tests, Polish, Definition of Done | — |

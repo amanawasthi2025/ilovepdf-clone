@@ -2,7 +2,9 @@ import {
   S3Client,
   PutObjectCommand,
   CreateBucketCommand,
+  GetObjectCommand,
 } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { env } from './env'
 
 const protocol = env.MINIO_USE_SSL ? 'https' : 'http'
@@ -45,4 +47,14 @@ export async function uploadFile(
       ContentType: contentType,
     }),
   )
+}
+
+export async function getPresignedDownloadUrl(key: string): Promise<string> {
+  const date = new Date().toISOString().slice(0, 10)
+  const command = new GetObjectCommand({
+    Bucket: env.MINIO_BUCKET_NAME,
+    Key: key,
+    ResponseContentDisposition: `attachment; filename="merged-${date}.pdf"`,
+  })
+  return getSignedUrl(s3Client, command, { expiresIn: env.DOWNLOAD_URL_TTL_SECONDS })
 }
