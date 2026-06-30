@@ -11,7 +11,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
-      '@ilovepdf/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
 })
