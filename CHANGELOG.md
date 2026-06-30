@@ -26,6 +26,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dev Dockerfiles for web and worker
 - Vitest configured for both apps
 
+**Session 008 — Frontend Upload UI (2026-06-30)**
+- `app/merge/page.tsx` — `/merge` route; client component with IDLE → UPLOADING → PROCESSING state machine
+- Dropzone: drag-and-drop + click-to-browse via `react-dropzone`; accepts `application/pdf` only; 50 MB per-file cap enforced at drop time with inline error messages
+- File list: sortable via `@dnd-kit/sortable` drag-and-drop + up/down buttons; per-file remove (×) button; filename + formatted size displayed
+- Merge button: disabled when fewer than 2 files; shows spinner during UPLOADING; re-enables and shows error banner on API failure
+- `app/merge/validation.ts` — `formatBytes()` utility + shared constants (`MAX_FILE_SIZE_BYTES`, `MAX_FILES`, `MIN_FILES`)
+- `app/merge/validation.test.ts` — 9 unit tests for `formatBytes` and constants
+- PROCESSING state stub (spinner + file count) ready for Session 009 to replace with polling UI
+
 **Session 007 — Job Status & Download API (2026-06-30)**
 - `GET /api/merge/jobs/:jobId/status` — polls job status from PostgreSQL; returns `{ jobId, status, createdAt, updatedAt, errorMessage }` or 404 `JOB_NOT_FOUND`
 - `GET /api/merge/jobs/:jobId/download` — issues a 5-minute pre-signed MinIO URL for COMPLETED jobs; returns 409 `JOB_NOT_COMPLETE` (with current status) for non-COMPLETED jobs, 404 `JOB_NOT_FOUND` for unknown IDs

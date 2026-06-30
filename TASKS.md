@@ -7,13 +7,13 @@
 
 ## Current Feature
 
-**Feature:** PDF Merge — Session 008: Frontend Upload UI
+**Feature:** PDF Merge — Session 009: Frontend Status Polling & Download
 **Status:** IN PROGRESS
 **Branch:** `feature/pdf-merge`
 **Started:** 2026-06-30
 
 ### Description
-Build the `/merge` page upload UI: dropzone, file list with reorder/remove, client-side validation, and the UPLOADING state. Covers AC-01 through AC-11 and the upload half of AC-12.
+Replace the PROCESSING stub with TanStack Query polling of `GET /api/merge/jobs/:jobId/status`, and implement the DONE (download button) and ERROR (try again) states.
 
 ### Session Breakdown
 
@@ -25,7 +25,7 @@ Build the `/merge` page upload UI: dropzone, file list with reorder/remove, clie
 | 005 | File Upload API (`POST /api/merge/jobs`) | ✅ Complete |
 | 006 | Worker & pdf-lib merge processor | ✅ Complete |
 | 007 | Job Status & Download API | ✅ Complete |
-| 008 | Frontend Upload UI | — |
+| 008 | Frontend Upload UI | ✅ Complete |
 | 009 | Frontend Status Polling & Download | — |
 | 010 | E2E Tests, Polish, Definition of Done | — |
 
