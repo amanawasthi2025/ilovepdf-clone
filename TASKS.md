@@ -7,13 +7,37 @@
 
 ## Current Feature
 
-**No active feature.** PDF Merge is complete. Awaiting approval to begin the next feature.
-
-See backlog below for candidates.
+None — PDF Split is complete and awaiting the next feature to be approved per the One-Feature-at-a-Time rule.
 
 ---
 
 ## Previous Feature (Approved)
+
+**Feature:** PDF Split
+**Status:** COMPLETE ✅
+**Branch:** `feature/pdf-split`
+**Completed:** 2026-07-01
+**Spec:** `wiki/active-feature.md`
+
+### Description
+Allow a user to upload a single PDF and a set of custom page ranges, split it into one PDF per range, package the results into a ZIP archive, and download it. No authentication required. Reuses the full pipeline established by PDF Merge.
+
+### Session Breakdown
+| Session | Title | Status |
+|---|---|---|
+| 011 | Planning, ADR-003 & Acceptance Criteria | COMPLETE ✅ |
+| 012 | Split API (`POST /api/split/jobs`, validation) | COMPLETE ✅ |
+| 013 | Worker: pdf-lib Split Processor + jszip Archive | COMPLETE ✅ |
+| 014 | Frontend: `/split` Upload, Polling & Download UI | COMPLETE ✅ |
+| 015 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
+
+### Acceptance Criteria
+All 38 criteria verified — see `wiki/active-feature.md`.
+
+### Blocked Items
+None.
+
+---
 
 **Feature:** PDF Merge
 **Status:** COMPLETE ✅
@@ -53,6 +77,7 @@ None.
 |---|---|---|---|
 | 0 | Project Initialization & Engineering Foundation | 2026-06-30 | Docs, stack, process only |
 | 1 | PDF Merge | 2026-06-30 | Full pipeline; 36 ACs; 25 unit tests + 1 E2E |
+| 2 | PDF Split | 2026-07-01 | Custom ranges, ZIP output; 38 ACs; 75 unit tests + 4 E2E |
 
 ---
 
@@ -90,4 +115,4 @@ None.
 
 ---
 
-*Last updated: 2026-06-30 — Session 010 (PDF Merge Complete)*
+*Last updated: 2026-07-01 — Session 015 (PDF Split Complete)*

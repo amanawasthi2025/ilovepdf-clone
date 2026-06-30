@@ -11,6 +11,7 @@
 |---|---|---|---|---|
 | 0 | Project Initialization & Engineering Foundation | 2026-06-30 | v0.0.1 | Docs, stack decisions, process. No app code. |
 | 1 | PDF Merge | 2026-06-30 | v0.1.0 | Full upload → worker → download pipeline; 36 ACs verified; 25 unit tests + 1 Playwright E2E test. |
+| 2 | PDF Split | 2026-07-01 | v0.2.0 | Custom page-range split, ZIP archive output; 38 ACs verified; 75 unit tests + 4 Playwright E2E tests. |
 
 ---
 
@@ -79,4 +80,35 @@ Users can upload 2–10 PDF files through a drag-and-drop browser interface, hav
 
 ---
 
-*Last updated: 2026-06-30 — Session 010 (PDF Merge Complete)*
+### Feature 2: PDF Split
+**Completed:** 2026-07-01
+**Version:** v0.2.0
+**Branch:** feature/pdf-split
+
+#### What Was Built
+Users can upload a single PDF and a comma-separated list of custom page ranges (e.g. `1-3,4-6,7-10`) through a browser interface, have the server split it into one output PDF per range, package the outputs into a ZIP archive, and download it — no authentication required. Reuses the full Merge pipeline (upload API → BullMQ queue → pdf-lib worker → MinIO storage → polling frontend) with no new infrastructure.
+
+#### Key Decisions
+- Custom page ranges only as the split mode — simplest, highest-value single mode; "split every N pages" and "extract every page" explicitly deferred until requested
+- Single ZIP archive as output, reusing the existing `Job.outputKey` field unchanged — no schema branching for single-file vs multi-file jobs
+- Range bounds validated synchronously at the upload API (pdf-lib loads the PDF to get the real page count) before enqueueing — fail-fast UX, and means a job can only reach the worker with already-valid ranges
+- `jszip` (ADR-003) for archiving — in-memory async API matches the worker's existing Buffer-in/Buffer-out pattern
+- `Job.splitRanges` persisted as a column (not just passed via the BullMQ payload) — durable record for observability/debugging, consistent with Job being the source of truth for what was requested
+
+#### Tests Added
+- 75 Vitest unit/integration tests across the monorepo (9 worker, 66 web), including 16 for ranges-syntax client validation and 10 for the `parseAndValidateRanges()` server-side validator
+- `apps/worker/src/jobs/split.test.ts` — 5 tests covering the FAILED-on-error paths (invalid magic bytes, pdf-lib load failure, MinIO upload failure, ZIP generation failure) plus the happy-path page-extraction/ZIP-naming logic
+- 3 Playwright E2E tests (`apps/web/e2e/split.spec.ts`): full happy-path flow (upload → ranges → DONE → download ZIP → verify per-range page counts → reset), `RANGE_OUT_OF_BOUNDS` error-banner path, and AC-21 (job FAILED after being queued → ERROR state → reset)
+
+#### Known Limitations
+- Same as Merge: no TTL cleanup worker, no rate limiting, fixed worker concurrency
+- A genuinely corrupted PDF can never reach the worker as a post-queue failure — the upload API performs the same magic-bytes + pdf-lib load check the worker does, so corrupt files are rejected with `400` before a job is ever enqueued. AC-21 ("job fails after being queued") is therefore only reachable in practice via infrastructure failures (MinIO/ZIP errors), which the worker unit tests cover directly
+
+#### Lessons Learned
+- When an AC's example trigger ("e.g. corrupted PDF") turns out to be structurally unreachable through the real flow because an earlier validation layer already prevents it, the fix is to seed the failure state directly (here: a `Job` row written via Prisma plus a Playwright `page.route()` intercept on the upload POST) rather than contort the test into something flaky or skip the AC — this exercises the actual reachable code path (status endpoint + UI) deterministically
+- `jszip`, like `pdf-lib` before it, is a direct dependency of `apps/worker` only but resolves fine from `apps/web/e2e/*.ts` via npm workspace hoisting to the root `node_modules` — no need to add it to `apps/web`'s own `devDependencies`
+- Both `apps/web` and `apps/worker` dev servers need the root `.env` loaded explicitly when started from the host shell (`apps/worker` already does this via `node --env-file=../../.env`; `apps/web`'s plain `next dev` does not, since there is no `apps/web/.env` — Next.js does not walk up to a parent directory's `.env`)
+
+---
+
+*Last updated: 2026-07-01 — Session 015 (PDF Split Complete)*

@@ -49,12 +49,11 @@ export async function uploadFile(
   )
 }
 
-export async function getPresignedDownloadUrl(key: string): Promise<string> {
-  const date = new Date().toISOString().slice(0, 10)
+export async function getPresignedDownloadUrl(key: string, filename: string): Promise<string> {
   const command = new GetObjectCommand({
     Bucket: env.MINIO_BUCKET_NAME,
     Key: key,
-    ResponseContentDisposition: `attachment; filename="merged-${date}.pdf"`,
+    ResponseContentDisposition: `attachment; filename="${filename}"`,
   })
   return getSignedUrl(s3Client, command, { expiresIn: env.DOWNLOAD_URL_TTL_SECONDS })
 }

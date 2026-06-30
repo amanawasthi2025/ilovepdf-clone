@@ -5,25 +5,35 @@
 
 ---
 
-## Current Feature: PDF Merge
+## Current Feature: PDF Split
 
 **Status:** COMPLETE ✅
-**Started:** 2026-06-30
-**Completed:** 2026-06-30
-**Branch:** `feature/pdf-merge`
-**Sessions:** 002 (planning) → 003–010 (implementation)
+**Started:** 2026-07-01
+**Completed:** 2026-07-01
+**Branch:** `feature/pdf-split`
+**Sessions:** 011 (planning) → 012–015 (implementation)
 
 ---
 
 ## Feature Summary
 
-Allow a user to upload two or more PDF files through a browser interface, have the system merge them into a single PDF in the order provided, and download the result. No authentication required.
+Allow a user to upload a single PDF file and a set of custom page ranges through a browser interface. The system splits the PDF into one output PDF per range, packages all outputs into a single ZIP archive, and lets the user download it. No authentication required.
 
-**Why this feature first:**
-- Highest-demand PDF tool globally
-- Exercises the full processing pipeline end-to-end: upload → queue → worker → storage → download
-- Anonymous usage validates the architecture without auth complexity
-- Concretely verifiable: upload two PDFs, download one, open it — it works or it doesn't
+**Why this feature next:**
+- Backlog priority #2 — complements Merge, high user demand
+- Reuses the entire pipeline proven by Merge (upload → queue → worker → storage → download, anonymous `jobId` access) with no new infrastructure
+- Introduces a new, deliberately scoped wrinkle (multiple outputs per job) without expanding to a second processing library — pdf-lib (ADR-001) still does all the PDF work
+
+---
+
+## Scope Decisions (locked 2026-07-01)
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Split mode | Custom page ranges only (e.g. `1-3,4-6,7-10`) | Matches the core split tool in this product category; simplest single mode to spec, build, and test. "Split every N pages" and "extract every page" are explicitly out of scope for this feature — can be added later as additional modes if requested |
+| Output delivery | Single ZIP archive, one `outputKey`, one pre-signed download URL | Reuses the existing `Job.outputKey` field and download endpoint shape unchanged from Merge — no schema branching for single-file vs multi-file jobs |
+| Range validation | At the upload API, before enqueueing | pdf-lib loads the single uploaded PDF synchronously in the route handler to confirm every range's bounds against the real page count; rejects with `400` immediately rather than queuing a job that can only fail later. Cheap because it is always exactly one file (vs. Merge's up-to-10) |
+| ZIP library | `jszip` (ADR-003) | In-memory, async API matches the worker's existing Buffer-in/Buffer-out pattern; no changes needed to `uploadFile()` |
 
 ---
 
@@ -33,47 +43,43 @@ Allow a user to upload two or more PDF files through a browser interface, have t
 
 | Constraint | Value | Env Variable |
 |---|---|---|
-| Minimum files | 2 | — |
-| Maximum files | 10 | — |
-| Max size per file | 50 MB | `MAX_FILE_SIZE_BYTES` |
-| Max total size | 200 MB | `MAX_TOTAL_SIZE_BYTES` |
+| Files accepted | Exactly 1 | — |
+| Max size | 50 MB | `MAX_FILE_SIZE_BYTES` (reused from Merge) |
 | Accepted type | PDF only | — |
 
-PDF validation: both MIME type (`application/pdf`) and magic bytes (`%PDF`) must match. Extension alone is not sufficient.
+PDF validation: both MIME type (`application/pdf`) and magic bytes (`%PDF`) must match. Extension alone is not sufficient. Same validation approach as Merge.
 
-### File Ordering
+### Page Range Format
 
-Files are merged in the order they are submitted. The UI allows the user to reorder files before submission via drag-and-drop or up/down buttons.
+- Submitted as a single string field, e.g. `ranges=1-3,4-6,7-10`
+- Format: comma-separated list of `start-end` pairs, 1-indexed, inclusive
+- Each range produces exactly one output PDF in the ZIP, named `split-<start>-<end>.pdf`
+- Validation rules (all enforced at the API layer before enqueueing):
+  - At least 1 range required
+  - Syntax must match `^\d+-\d+(,\d+-\d+)*$`
+  - `start >= 1` for every range
+  - `end <= totalPageCount` for every range (determined by loading the uploaded PDF with pdf-lib)
+  - `start <= end` for every range
+  - Ranges may overlap or be submitted out of order — both are permitted (no dedup/sort requirement; output order matches submission order)
 
 ### File Retention
 
-| Item | Retention | Note |
-|---|---|---|
-| Input files (MinIO) | 1 hour from job creation | Controlled by `FILE_TTL_SECONDS` (default: `3600`) |
-| Output file (MinIO) | 1 hour from job creation | Same TTL |
-| Job record (PostgreSQL) | 24 hours from creation | For audit/debugging |
-
-TTL enforcement (actually deleting expired files) is **not in scope for this feature**. The `expiresAt` field is stored now to enable a future cleanup worker.
+Same as Merge — input file and output ZIP retained 1 hour (`FILE_TTL_SECONDS`), job record retained 24 hours. TTL enforcement remains out of scope (deferred to a future cleanup worker, same as Merge).
 
 ### Rate Limiting & Authentication
 
-Not implemented in this feature. The `jobId` (a CUID) functions as an unguessable access token — possession of the `jobId` is sufficient authorization to check status and download the result. Rate limiting will be addressed when authentication is introduced.
+Not implemented, same as Merge. `jobId` is the anonymous access token.
 
 ---
 
 ## Job Lifecycle
 
+Same as Merge:
+
 ```
 PENDING → PROCESSING → COMPLETED
                      ↘ FAILED
 ```
-
-| Status | Meaning |
-|---|---|
-| `PENDING` | Files stored, job record created, job enqueued — waiting for a worker |
-| `PROCESSING` | Worker has claimed the job and is actively merging |
-| `COMPLETED` | Merge succeeded; output file stored in MinIO |
-| `FAILED` | Merge failed (corrupt PDF, processing error, unrecoverable condition) |
 
 ---
 
@@ -86,6 +92,7 @@ model Job {
   status        JobStatus @default(PENDING)
   inputKeys     String[]
   outputKey     String?
+  splitRanges   String?
   errorMessage  String?
   correlationId String    @unique
   expiresAt     DateTime
@@ -95,6 +102,7 @@ model Job {
 
 enum JobType {
   MERGE
+  SPLIT
 }
 
 enum JobStatus {
@@ -105,26 +113,25 @@ enum JobStatus {
 }
 ```
 
-**Field notes:**
-- `id`: CUID — used as the public `jobId` returned to the client
-- `inputKeys`: ordered array of MinIO object keys for the input files (order = merge order)
-- `outputKey`: MinIO object key for the merged output file; `null` until COMPLETED
-- `errorMessage`: human-readable error description; `null` unless FAILED
-- `correlationId`: UUID generated at job creation, included in all log lines for this job
-- `expiresAt`: `createdAt + FILE_TTL_SECONDS`; used by a future cleanup worker
+**Schema changes from Merge:**
+- `JobType` enum: added `SPLIT`
+- `Job.splitRanges: String?` — the validated, comma-separated range string (e.g. `"1-3,4-6,7-10"`); `null` for `MERGE` jobs. Persisted (not just passed via the BullMQ job payload) so the worker, status endpoint, and any future debugging/observability have a durable record of what was requested
+- `inputKeys` reused as-is: for `SPLIT` jobs it always contains exactly 1 entry (the uploaded PDF's storage key)
+- `outputKey` reused as-is: for `SPLIT` jobs it holds the ZIP archive's storage key
 
 ---
 
 ## API Contract
 
-### POST /api/merge/jobs
+### POST /api/split/jobs
 
-Create a new merge job by uploading files.
+Create a new split job by uploading a file and page ranges.
 
 **Request:**
 ```
 Content-Type: multipart/form-data
-Field name: files (multiple)
+Field name: file (single)
+Field name: ranges (string, e.g. "1-3,4-6,7-10")
 ```
 
 **Success — 202 Accepted:**
@@ -136,11 +143,12 @@ Field name: files (multiple)
 
 | HTTP | Error Code | Condition |
 |---|---|---|
-| 400 | `MINIMUM_FILES_REQUIRED` | Fewer than 2 files submitted |
-| 400 | `MAXIMUM_FILES_EXCEEDED` | More than 10 files submitted |
-| 400 | `INVALID_FILE_TYPE` | A file is not a valid PDF (MIME or magic bytes mismatch) |
-| 413 | `FILE_TOO_LARGE` | A single file exceeds `MAX_FILE_SIZE_BYTES` |
-| 413 | `TOTAL_SIZE_EXCEEDED` | Combined size of all files exceeds `MAX_TOTAL_SIZE_BYTES` |
+| 400 | `FILE_REQUIRED` | No file submitted |
+| 400 | `INVALID_FILE_TYPE` | File is not a valid PDF (MIME or magic bytes mismatch) |
+| 413 | `FILE_TOO_LARGE` | File exceeds `MAX_FILE_SIZE_BYTES` |
+| 400 | `RANGES_REQUIRED` | No `ranges` field submitted |
+| 400 | `INVALID_RANGE_FORMAT` | `ranges` does not match the required syntax |
+| 400 | `RANGE_OUT_OF_BOUNDS` | A range's `start` or `end` falls outside `1..totalPageCount` |
 | 500 | `INTERNAL_ERROR` | Storage or queue failure |
 
 All error responses follow this shape:
@@ -150,22 +158,20 @@ All error responses follow this shape:
 
 ---
 
-### GET /api/merge/jobs/:jobId/status
+### GET /api/split/jobs/:jobId/status
 
-Poll for the current status of a merge job.
+Identical contract to Merge's status endpoint.
 
 **Success — 200 OK:**
 ```json
 {
   "jobId": "clxxxxxxxxxxxxxxxxxxxxxxxx",
   "status": "PENDING",
-  "createdAt": "2026-06-30T10:00:00.000Z",
-  "updatedAt": "2026-06-30T10:00:05.000Z",
+  "createdAt": "2026-07-01T10:00:00.000Z",
+  "updatedAt": "2026-07-01T10:00:05.000Z",
   "errorMessage": null
 }
 ```
-
-`errorMessage` is `null` for all statuses except `FAILED`, where it contains a descriptive string.
 
 **Error responses:**
 
@@ -175,19 +181,19 @@ Poll for the current status of a merge job.
 
 ---
 
-### GET /api/merge/jobs/:jobId/download
+### GET /api/split/jobs/:jobId/download
 
-Get a pre-signed download URL for the merged output file.
+Get a pre-signed download URL for the ZIP archive.
 
 **Success — 200 OK (only when status is `COMPLETED`):**
 ```json
-{ "url": "https://storage.example.com/outputs/clxxx...pdf?X-Amz-Signature=..." }
+{ "url": "https://storage.example.com/outputs/clxxx...zip?X-Amz-Signature=..." }
 ```
 
-The pre-signed URL is valid for **5 minutes**. The client should redirect to or fetch from this URL immediately.
+The pre-signed URL is valid for **5 minutes**, same as Merge.
 
 The `Content-Disposition` header on the storage response will be:
-`attachment; filename="merged-YYYY-MM-DD.pdf"`
+`attachment; filename="split-YYYY-MM-DD.zip"`
 
 **Error responses:**
 
@@ -205,43 +211,46 @@ The 409 response includes the current status:
 
 ## Worker Specification
 
-**Queue name:** `document-processing`
+**Queue name:** `document-processing` (same queue as Merge — `jobType` in the payload distinguishes processors)
 
-**Concurrency:** 2 (configurable via `WORKER_CONCURRENCY` env var)
+**Concurrency:** 2 (configurable via `WORKER_CONCURRENCY`, shared with Merge)
 
-**Retry policy:** 3 attempts, exponential backoff (1s, 2s, 4s delays)
+**Retry policy:** 3 attempts, exponential backoff (1s, 2s, 4s delays) — same as Merge
 
 **Job payload (enqueued by the API):**
 ```typescript
 {
-  jobId: string;       // matches Job.id in PostgreSQL
-  inputKeys: string[]; // ordered MinIO object keys
+  jobId: string;        // matches Job.id in PostgreSQL
+  inputKey: string;     // single MinIO object key (the uploaded PDF)
+  ranges: string;        // e.g. "1-3,4-6,7-10" — already validated by the API
 }
 ```
 
 **Processing steps:**
 1. Update Job status → `PROCESSING` in PostgreSQL
-2. For each key in `inputKeys` (in order): fetch object from MinIO as `Buffer`
-3. Validate each buffer starts with `%PDF` magic bytes
-4. Use pdf-lib to load each PDF and merge all pages in order into a new document
-5. Save the merged document as `Uint8Array`
-6. Upload to MinIO under a new UUID key (prefix: `outputs/`)
-7. Update Job: status → `COMPLETED`, `outputKey` = the new MinIO key
-8. On any unrecoverable error: update Job: status → `FAILED`, `errorMessage` = error description
+2. Fetch the single input file from MinIO as a `Buffer`
+3. Validate the buffer starts with `%PDF` magic bytes
+4. Load the source PDF with pdf-lib
+5. For each range (in submission order): create a new `PDFDocument`, copy the page indices in that range, save as `Uint8Array`
+6. Build a ZIP archive with `jszip` (ADR-003): one entry per range, named `split-<start>-<end>.pdf`
+7. Generate the ZIP as a `Buffer` (`zip.generateAsync({ type: 'nodebuffer' })`)
+8. Upload the ZIP to MinIO under a new UUID key (prefix: `outputs/`)
+9. Update Job: status → `COMPLETED`, `outputKey` = the new MinIO key
+10. On any unrecoverable error: update Job: status → `FAILED`, `errorMessage` = error description
 
-**Logging:** Every log line must include `correlationId` (from the Job record), `jobId`, and `jobType`.
+**Logging:** Every log line must include `correlationId`, `jobId`, and `jobType` — same convention as Merge.
 
-**Worker does not** clean up input or output files — that is deferred to a future TTL cleanup feature.
+**Worker does not** clean up input or output files — same deferred scope as Merge.
 
 ---
 
 ## Frontend Specification
 
-**Route:** `/merge`
+**Route:** `/split`
 
 ### States
 
-The page moves through four sequential states:
+Same four-state machine as Merge:
 
 ```
 IDLE → UPLOADING → PROCESSING → DONE
@@ -249,47 +258,46 @@ IDLE → UPLOADING → PROCESSING → DONE
 ```
 
 #### IDLE (initial state)
-- Drag-and-drop zone with label "Drag PDF files here or click to browse"
+- Single-file dropzone with label "Drag a PDF file here or click to browse"
 - Accepted file type: `.pdf` / `application/pdf`
-- File list below the dropzone (empty initially)
-- Merge button below the file list, **disabled** when file count < 2
-- Each file in the list shows: filename, formatted file size, remove (×) button
-- Files can be reordered: drag-and-drop within the list, or up/down arrow buttons
-- Client-side validation before submission:
-  - Non-PDF files: rejected at drop/select with an inline error message per file
-  - Files over 50MB: rejected at drop/select with an inline error message per file
-  - More than 10 files: 11th and beyond are rejected at drop/select
+- Once a file is dropped/selected, it replaces any previously selected file (single-file only — no list, no reordering)
+- Selected file shown below the dropzone: filename, formatted file size, remove (×) button
+- Page ranges text input: placeholder `e.g. 1-3, 4-6, 7-10`
+- Inline client-side validation of the ranges input before submission (syntax only — page-count bounds are necessarily server-side since the client does not parse the PDF):
+  - Empty input: Split button disabled
+  - Malformed syntax: inline error message, Split button disabled
+- Split button below the ranges input, **disabled** until a valid file is selected and ranges syntax is valid
+- Client-side validation before accepting a dropped/selected file:
+  - Non-PDF files: rejected at drop/select with an inline error message
+  - Files over 50MB: rejected at drop/select with an inline error message
 
-#### UPLOADING (after Merge is clicked, before API responds)
-- Merge button shows a loading spinner
-- File list and dropzone are non-interactive (disabled)
-- On API error (4xx/5xx): return to IDLE state with an error banner
+#### UPLOADING (after Split is clicked, before API responds)
+- Split button shows a loading spinner
+- Dropzone and ranges input are non-interactive (disabled)
+- On API error (4xx/5xx): return to IDLE state with an error banner (including `RANGE_OUT_OF_BOUNDS` surfaced with a clear message, since this can only be caught server-side)
 
 #### PROCESSING (after API returns `jobId`)
 - Full-page replacement of the upload UI
-- Spinner with message: "Merging your files…" and the file count (e.g., "Combining 3 PDFs")
-- TanStack Query polls `GET /api/merge/jobs/:jobId/status` every 2 seconds
+- Spinner with message: "Splitting your file…" and the range count (e.g., "Creating 3 PDFs")
+- TanStack Query polls `GET /api/split/jobs/:jobId/status` every 2 seconds
 - Polling stops when status is `COMPLETED` or `FAILED`
 
 #### DONE (status is `COMPLETED`)
-- Success icon + message: "Your PDFs have been merged successfully"
-- "Download merged PDF" button
-  - On click: calls `GET /api/merge/jobs/:jobId/download`, receives `{ url }`
+- Success icon + message: "Your PDF has been split successfully"
+- "Download ZIP" button
+  - On click: calls `GET /api/split/jobs/:jobId/download`, receives `{ url }`
   - Immediately triggers browser download via the pre-signed URL
 - Secondary message: "Your file will be available for download for 1 hour"
-- "Merge more PDFs" link resets the page to IDLE
+- "Split another PDF" link resets the page to IDLE
 
 #### ERROR (status is `FAILED` or network error)
-- Error icon + message: "Merge failed"
+- Error icon + message: "Split failed"
 - Short explanation (from `errorMessage` if available, otherwise generic)
 - "Try again" button: resets page to IDLE (no page refresh)
 
 ### Polling Behaviour
 
-- Library: TanStack Query (`useQuery` with `refetchInterval`)
-- Interval: 2000ms
-- `refetchInterval` is set to `false` when status is `COMPLETED` or `FAILED`
-- Polling begins only after a `jobId` is returned by the upload mutation
+Identical to Merge: TanStack Query `useQuery` with `refetchInterval: 2000`, set to `false` on `COMPLETED`/`FAILED`.
 
 ---
 
@@ -299,71 +307,70 @@ The feature is Done when **all** of the following are verified:
 
 ### Upload
 
-- [x] AC-01: User can drag-and-drop 2 PDF files onto the dropzone and see them in the file list
-- [x] AC-02: User can click the dropzone to open a file browser and select PDFs
-- [x] AC-03: User can upload up to 10 files
-- [x] AC-04: Each file in the list shows its filename and formatted size
-- [x] AC-05: User can remove a file from the list by clicking the remove button
-- [x] AC-06: User can reorder files in the list before submission
-- [x] AC-07: Merge button is disabled when fewer than 2 files are in the list
-- [x] AC-08: Merge button is enabled when 2 or more files are in the list
+- [x] AC-01: User can drag-and-drop a PDF file onto the dropzone and see it selected
+- [x] AC-02: User can click the dropzone to open a file browser and select a PDF
+- [x] AC-03: Selected file shows its filename and formatted size
+- [x] AC-04: User can remove the selected file via the remove button
+- [x] AC-05: User can enter page ranges in the text input
+- [x] AC-06: Split button is disabled when no file is selected
+- [x] AC-07: Split button is disabled when ranges input is empty or malformed
+- [x] AC-08: Split button is enabled when a valid file and syntactically valid ranges are present
 - [x] AC-09: Dragging a non-PDF file onto the dropzone shows an error and rejects the file
 - [x] AC-10: Selecting a file over 50MB shows an error and rejects the file
-- [x] AC-11: Attempting to add an 11th file is rejected with an inline message
 
 ### Processing & Download
 
-- [x] AC-12: Clicking Merge submits files to `POST /api/merge/jobs` and receives a `jobId`
-- [x] AC-13: After submission, the page shows a "Merging…" processing state
-- [x] AC-14: The processing state polls the status endpoint every 2 seconds
-- [x] AC-15: When the job completes, the page transitions to the DONE state
-- [x] AC-16: The DONE state shows a Download button
-- [x] AC-17: Clicking Download triggers a browser file download
-- [x] AC-18: The downloaded file is a valid PDF (can be opened in a standard PDF viewer)
-- [x] AC-19: The downloaded PDF contains all uploaded pages in the order they were arranged in the UI
-- [x] AC-20: "Merge more PDFs" resets the page to IDLE without a page refresh
+- [x] AC-11: Clicking Split submits the file and ranges to `POST /api/split/jobs` and receives a `jobId`
+- [x] AC-12: After submission, the page shows a "Splitting…" processing state
+- [x] AC-13: The processing state polls the status endpoint every 2 seconds
+- [x] AC-14: When the job completes, the page transitions to the DONE state
+- [x] AC-15: The DONE state shows a Download ZIP button
+- [x] AC-16: Clicking Download triggers a browser file download of a `.zip` file
+- [x] AC-17: The downloaded ZIP contains one valid PDF per requested range
+- [x] AC-18: Each PDF in the ZIP contains exactly the pages from its corresponding range, in order
+- [x] AC-19: "Split another PDF" resets the page to IDLE without a page refresh
 
 ### Error Handling
 
-- [x] AC-21: If the merge job fails (e.g. corrupt PDF input), the page shows the ERROR state
+- [x] AC-20: Submitting a range whose `end` exceeds the PDF's page count returns `400 RANGE_OUT_OF_BOUNDS` and the UI shows an error banner without losing the selected file
+- [x] AC-21: If the split job fails after being queued (e.g. corrupted PDF), the page shows the ERROR state
 - [x] AC-22: The ERROR state shows a "Try again" button that resets to IDLE
-- [x] AC-23: A network error during upload shows an error banner and keeps the file list intact
+- [x] AC-23: A network error during upload shows an error banner and keeps the selected file intact
 
 ### API
 
-- [x] AC-24: `POST /api/merge/jobs` with 2 valid PDFs → 202 `{ jobId }`
-- [x] AC-25: `POST /api/merge/jobs` with 1 file → 400 `MINIMUM_FILES_REQUIRED`
-- [x] AC-26: `POST /api/merge/jobs` with a non-PDF → 400 `INVALID_FILE_TYPE`
-- [x] AC-27: `GET /api/merge/jobs/:jobId/status` for COMPLETED job → `{ status: "COMPLETED" }`
-- [x] AC-28: `GET /api/merge/jobs/:jobId/status` for unknown ID → 404
-- [x] AC-29: `GET /api/merge/jobs/:jobId/download` for COMPLETED job → `{ url }` (valid pre-signed URL)
-- [x] AC-30: `GET /api/merge/jobs/:jobId/download` for PENDING job → 409 `JOB_NOT_COMPLETE`
-- [x] AC-31: `GET /api/merge/jobs/:jobId/download` for unknown ID → 404
+- [x] AC-24: `POST /api/split/jobs` with a valid PDF and valid ranges → 202 `{ jobId }`
+- [x] AC-25: `POST /api/split/jobs` with no file → 400 `FILE_REQUIRED`
+- [x] AC-26: `POST /api/split/jobs` with a non-PDF → 400 `INVALID_FILE_TYPE`
+- [x] AC-27: `POST /api/split/jobs` with malformed ranges syntax → 400 `INVALID_RANGE_FORMAT`
+- [x] AC-28: `POST /api/split/jobs` with an out-of-bounds range → 400 `RANGE_OUT_OF_BOUNDS`
+- [x] AC-29: `GET /api/split/jobs/:jobId/status` for COMPLETED job → `{ status: "COMPLETED" }`
+- [x] AC-30: `GET /api/split/jobs/:jobId/status` for unknown ID → 404
+- [x] AC-31: `GET /api/split/jobs/:jobId/download` for COMPLETED job → `{ url }` (valid pre-signed URL)
+- [x] AC-32: `GET /api/split/jobs/:jobId/download` for PENDING job → 409 `JOB_NOT_COMPLETE`
+- [x] AC-33: `GET /api/split/jobs/:jobId/download` for unknown ID → 404
 
 ### Quality
 
-- [x] AC-32: `npm run typecheck` exits with 0 errors
-- [x] AC-33: `npm run lint` exits with 0 errors/warnings
-- [x] AC-34: `npm run test` passes all unit and integration tests
-- [x] AC-35: Playwright E2E test passes: upload 2 PDFs → download merged PDF → file is a valid PDF
-- [x] AC-36: No authentication required for any of the above flows
+- [x] AC-34: `npm run typecheck` exits with 0 errors
+- [x] AC-35: `npm run lint` exits with 0 errors/warnings
+- [x] AC-36: `npm run test` passes all unit and integration tests
+- [x] AC-37: Playwright E2E test passes: upload 1 PDF with valid ranges → download ZIP → all entries are valid PDFs with correct page counts
+- [x] AC-38: No authentication required for any of the above flows
 
 ---
 
 ## Open Questions — Resolved
 
-These were listed as open in the Session 001 note. All decisions affecting this feature are resolved here.
-
 | Question | Decision | Rationale |
 |---|---|---|
-| File retention TTL | 1 hour (3600s), configurable via `FILE_TTL_SECONDS` | Balances storage cost with user expectation; communicated in the UI |
-| Anonymous session tracking | Not implemented — `jobId` is the access token | Simplest approach; rate limiting deferred until auth is introduced |
-| Per-file size limit | 50MB | Accommodates most real PDFs; protects worker memory |
-| Total size limit | 200MB | Protects against multi-file abuse while supporting legitimate use |
-| Output filename | `merged-YYYY-MM-DD.pdf` via `Content-Disposition` | Human-readable; no server-side state needed |
-| Merge order | Submission order; UI allows reordering before submit | Natural UX; ordering is the user's responsibility |
+| Split mode | Custom page ranges only | Highest-value single mode; other modes deferred until requested |
+| Output delivery | Single ZIP, reusing `outputKey` | No schema branching; minimal change from Merge's proven shape |
+| Range validation timing | At upload API, before enqueueing | Fail-fast UX; cheap for a single file |
+| ZIP library | jszip (ADR-003) | Matches existing in-memory worker pattern |
+| Persist `splitRanges`? | Yes, as a `Job` column | Durable record for observability/debugging; consistent with Job being the source of truth for what was requested, not just the BullMQ payload |
 
-Deployment target, domain name, and payment provider remain open but do not affect this feature.
+No open questions remain that block implementation.
 
 ---
 
@@ -371,16 +378,12 @@ Deployment target, domain name, and payment provider remain open but do not affe
 
 | Session | Title | Status |
 |---|---|---|
-| 002 | Planning, ADRs & Acceptance Criteria | COMPLETE ✅ |
-| 003 | Monorepo Scaffolding & Dev Environment | COMPLETE ✅ |
-| 004 | Database Schema & Health Endpoint | COMPLETE ✅ |
-| 005 | File Upload API | COMPLETE ✅ |
-| 006 | Worker & pdf-lib Merge Processor | COMPLETE ✅ |
-| 007 | Job Status & Download API | COMPLETE ✅ |
-| 008 | Frontend: Upload UI | COMPLETE ✅ |
-| 009 | Frontend: Status Polling & Download | COMPLETE ✅ |
-| 010 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
+| 011 | Planning, ADR-003 & Acceptance Criteria | COMPLETE ✅ |
+| 012 | Split API (`POST /api/split/jobs`, validation) | COMPLETE ✅ |
+| 013 | Worker: pdf-lib Split Processor + jszip Archive | COMPLETE ✅ |
+| 014 | Frontend: `/split` Upload, Polling & Download UI | COMPLETE ✅ |
+| 015 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ---
 
-*Last updated: 2026-06-30 — Session 010 (PDF Merge Complete)*
+*Last updated: 2026-07-01 — Session 015 (E2E Tests, Polish & Definition of Done)*

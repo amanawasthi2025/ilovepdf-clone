@@ -26,29 +26,29 @@ const mockFindUnique = vi.mocked(prisma.job.findUnique)
 const mockGetPresignedUrl = vi.mocked(getPresignedDownloadUrl)
 
 function buildRequest(jobId: string): NextRequest {
-  return new NextRequest(`http://localhost/api/merge/jobs/${jobId}/download`)
+  return new NextRequest(`http://localhost/api/split/jobs/${jobId}/download`)
 }
 
-describe('GET /api/merge/jobs/:jobId/download', () => {
+describe('GET /api/split/jobs/:jobId/download', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('returns 200 with pre-signed url when job is COMPLETED', async () => {
     mockFindUnique.mockResolvedValue({
       id: 'job-abc',
       status: 'COMPLETED',
-      outputKey: 'outputs/abc.pdf',
+      outputKey: 'outputs/abc.zip',
       correlationId: 'corr-123',
     } as never)
-    mockGetPresignedUrl.mockResolvedValue('https://storage.example.com/outputs/abc.pdf?sig=xxx')
+    mockGetPresignedUrl.mockResolvedValue('https://storage.example.com/outputs/abc.zip?sig=xxx')
 
     const res = await GET(buildRequest('job-abc'), { params: { jobId: 'job-abc' } })
     const body = await res.json() as Record<string, unknown>
 
     expect(res.status).toBe(200)
-    expect(body.url).toBe('https://storage.example.com/outputs/abc.pdf?sig=xxx')
+    expect(body.url).toBe('https://storage.example.com/outputs/abc.zip?sig=xxx')
     expect(mockGetPresignedUrl).toHaveBeenCalledWith(
-      'outputs/abc.pdf',
-      expect.stringMatching(/^merged-\d{4}-\d{2}-\d{2}\.pdf$/),
+      'outputs/abc.zip',
+      expect.stringMatching(/^split-\d{4}-\d{2}-\d{2}\.zip$/),
     )
   })
 

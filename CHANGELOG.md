@@ -7,6 +7,51 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.0] — 2026-07-01
+
+### Added (PDF Split — Complete ✅)
+
+**Session 015 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/split.spec.ts` — 3 Playwright E2E tests: full happy-path flow (upload 10-page PDF → ranges `1-3,4-6,7-10` → DONE → download ZIP → verify 3 entries with correct page counts via pdf-lib → reset to IDLE), `RANGE_OUT_OF_BOUNDS` error banner path, and AC-21 (job FAILED after being queued → ERROR state → "Try again" resets to IDLE)
+- AC-21 verification note: a corrupted PDF cannot reach the worker as a post-queue failure, because `POST /api/split/jobs` runs the identical magic-bytes + pdf-lib load check the worker runs, rejecting corrupt files with `400` before a job is ever enqueued (the worker-side FAILED unit tests in `split.test.ts` already cover that path). The E2E test instead seeds a `FAILED` job directly via Prisma and intercepts the upload POST to point at it, exercising the real `GET /status` route and the page's real polling/ERROR-state/reset code — the part of AC-21 that actually lives in this app
+- Full 38-item acceptance criteria checklist in `wiki/active-feature.md` walked and verified (dropzone/validation/state-machine via code + existing unit tests, API contracts via `route.test.ts` suites, worker FAILED handling via `split.test.ts`, happy/error/AC-21 paths via the new E2E tests)
+- Final quality gates: `npm run typecheck` (0 errors, 3 workspaces), `npm run lint` (0 errors/warnings, 3 workspaces), `npm run test` (75/75 — 9 worker, 66 web), `npx playwright test` (4/4 — 1 merge, 3 split)
+
+**Session 014 — Frontend: `/split` Upload, Polling & Download UI (2026-07-01)**
+- `apps/web/app/split/page.tsx` — `/split` route; client component implementing the IDLE → UPLOADING → PROCESSING → DONE/ERROR state machine from `wiki/active-feature.md`
+- Single-file dropzone via `react-dropzone` (`multiple: false`); accepts `application/pdf` only; 50 MB cap enforced at drop time with inline error messages; selected file shown with filename, formatted size, and a remove (×) button
+- Page-ranges text input with inline client-side syntax validation (`^\d+-\d+(,\d+-\d+)*$`); Split button disabled until a file is selected and ranges syntax is valid
+- PROCESSING state: spinner with range count ("Creating N PDFs"); reuses the TanStack Query polling pattern from Merge (`refetchInterval: 2000`, stops on `COMPLETED`/`FAILED`)
+- DONE state: success message, "Download ZIP" button (fetches pre-signed URL, triggers browser download), "Split another PDF" resets to IDLE
+- ERROR state: shows `errorMessage` from a failed job or a generic fallback; "Try again" resets to IDLE
+- On API error during UPLOADING, returns to IDLE with an error banner without clearing the selected file (covers `RANGE_OUT_OF_BOUNDS`, which can only be caught server-side)
+- `apps/web/app/split/validation.ts` — `formatBytes()`, `MAX_FILE_SIZE_BYTES`, `isValidRangesSyntax()`; `apps/web/app/split/validation.test.ts` — 16 unit tests
+- Manually verified against a running local stack with Playwright: happy path (valid ranges → DONE → downloaded ZIP with correct page counts per range) and the `RANGE_OUT_OF_BOUNDS` error path (error banner shown, selected file retained, button returns to IDLE)
+- Formal acceptance-criteria sign-off deferred to Session 015 (E2E Tests, Polish & Definition of Done), same pattern as Merge's Session 010
+
+**Session 013 — Worker: pdf-lib Split Processor + jszip Archive (2026-07-01)**
+- `apps/worker/src/jobs/split.ts` — `processSplitJob()`: downloads the single input PDF from MinIO, validates magic bytes, parses the already-validated `ranges` string, builds one `PDFDocument` per range via pdf-lib, archives all outputs into a ZIP with `jszip` (ADR-003) named `split-<start>-<end>.pdf`, uploads the ZIP, updates job status to COMPLETED or FAILED
+- `apps/worker/src/jobs/split.test.ts` — 5 unit tests (page-index extraction per range + ZIP entry naming, magic-bytes failure, pdf-lib load failure, MinIO upload failure, ZIP generation failure)
+- `apps/worker/src/index.ts` — registers the `split` job name on the shared `document-processing` Worker alongside `merge`
+- `apps/worker/package.json` — added `jszip` as an explicit dependency
+- Manually verified end-to-end against a running local stack: real 10-page PDF split into ranges `1-3,4-6,7-10`, downloaded ZIP confirmed to contain 3 correctly-named PDFs with 3/3/4 pages respectively
+- **Fixed:** `apps/web/lib/storage.ts`'s `getPresignedDownloadUrl()` no longer hardcodes a `merged-<date>.pdf` filename (a Session 012 bug surfaced by this session's manual verification — Split downloads were getting a `.pdf` filename on what is actually a `.zip`); now takes the filename as a parameter, set per-route to `merged-<date>.pdf` (Merge) or `split-<date>.zip` (Split)
+
+**Session 012 — Split API (2026-07-01)**
+- `POST /api/split/jobs` — single-file upload + page-range validation, enqueues a `split` job on `document-processing`
+- `apps/web/lib/ranges.ts` — `parseAndValidateRanges()` pure function; 10 unit tests
+- `GET /api/split/jobs/:jobId/status` and `.../download` — copied verbatim from Merge's generic equivalents
+- `apps/web/package.json` — added `pdf-lib` as an explicit dependency
+
+**Session 011 — Planning, ADR-003 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — complete PDF Split spec (page-range constraints, job lifecycle, 3 API contracts, worker spec including ZIP step, frontend state machine, 38 ACs)
+- `docs/adr/003-zip-archive-library.md` — Decision: jszip (rejected archiver, adm-zip)
+- `prisma/schema.prisma` — added `SPLIT` to `JobType` enum, added `Job.splitRanges: String?`; migration `20260630190347_add_split_job_type` applied
+- `packages/shared/src/types/job.ts` — added `JobType.SPLIT` and `SplitJobPayload` type
+- 5-session implementation breakdown (Sessions 011–015)
+
+---
+
 ## [0.1.0] — 2026-06-30
 
 ### Added (PDF Merge — Complete ✅)

@@ -65,8 +65,7 @@ A feature is **Done** only when ALL of the following are true:
 - [ ] Any new ADRs created in `docs/adr/`
 - [ ] Git commit with a meaningful message on a feature branch
 - [ ] PR opened from `feature/<name>` → `develop` (mandatory — not optional)
-- [ ] All CodeRabbit findings addressed: valid findings fixed with commits, rejected findings replied to inline with justification
-- [ ] CodeRabbit review clean — no open threads
+- [ ] PR merged into `develop` once quality gates pass (CodeRabbit review is currently disabled — see `## CodeRabbit Workflow (Disabled)` below)
 
 ---
 
@@ -172,11 +171,19 @@ Never skip pre-commit hooks.
 
 ---
 
-## CodeRabbit Workflow
+## CodeRabbit Workflow (Disabled)
 
-Every completed feature **must** go through CodeRabbit review before merging. This is not optional.
+**Status: disabled as of 2026-07-01, by explicit user instruction. Do not invoke or wait for CodeRabbit reviews until the user explicitly reinstates this section.**
 
-Claude must proactively open the PR immediately after the final feature commit — do not wait to be asked.
+CodeRabbit is **not** a required review step, quality gate, or part of the merge path right now. Concretely:
+
+- Do not wait for a CodeRabbit review or status check before merging a PR.
+- Do not treat open CodeRabbit comments (if any appear anyway, since the GitHub App may still be installed) as blocking — they are optional input only, not a gate.
+- The PR-opening requirement still stands (see Definition of Done): open the PR from `feature/<name>` → `develop` right after the final feature commit.
+- Once the standard quality gates pass (typecheck, lint, tests, manual verification) and the PR is open, merge `feature/<name>` into `develop` directly — no review-tool gate in between.
+- Still document any new lessons learned in `wiki/lessons-learned.md` after merging.
+
+The step-by-step process below is preserved for when CodeRabbit is reintroduced — it is not currently active:
 
 1. Open PR from `feature/<name>` → `develop` using `gh pr create` right after the final commit
 2. Wait for CodeRabbit to post inline review comments (typically 2–5 minutes)
@@ -246,4 +253,4 @@ If you are uncertain about any decision:
 
 ---
 
-*Last updated: 2026-06-30 — Session 001 (Project Initialization)*
+*Last updated: 2026-07-01 — Session 015 (CodeRabbit Workflow disabled by user instruction)*

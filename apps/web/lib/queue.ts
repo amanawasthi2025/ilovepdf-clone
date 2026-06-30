@@ -1,10 +1,10 @@
 import { Queue } from 'bullmq'
-import type { MergeJobPayload } from '@ilovepdf/shared'
+import type { MergeJobPayload, SplitJobPayload } from '@ilovepdf/shared'
 import { env } from './env'
 
 const redisUrl = new URL(env.REDIS_URL)
 
-export const documentProcessingQueue = new Queue<MergeJobPayload>(
+export const documentProcessingQueue = new Queue<MergeJobPayload | SplitJobPayload>(
   'document-processing',
   {
     connection: {

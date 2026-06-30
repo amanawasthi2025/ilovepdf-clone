@@ -1,17 +1,22 @@
 import process from 'node:process'
 import { Worker } from 'bullmq'
-import type { MergeJobPayload } from '@ilovepdf/shared'
+import type { Job } from 'bullmq'
+import type { MergeJobPayload, SplitJobPayload } from '@ilovepdf/shared'
 import { env } from './lib/env.js'
 import { logger } from './lib/logger.js'
 import { processMergeJob } from './jobs/merge.js'
+import { processSplitJob } from './jobs/split.js'
 
 const redisUrl = new URL(env.REDIS_URL)
 
-const worker = new Worker<MergeJobPayload>(
+const worker = new Worker<MergeJobPayload | SplitJobPayload>(
   'document-processing',
   async (job) => {
     if (job.name === 'merge') {
-      return processMergeJob(job)
+      return processMergeJob(job as Job<MergeJobPayload>)
+    }
+    if (job.name === 'split') {
+      return processSplitJob(job as Job<SplitJobPayload>)
     }
     logger.warn({ jobName: job.name }, 'unknown job type received — skipping')
   },
