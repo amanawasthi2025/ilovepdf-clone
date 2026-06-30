@@ -40,6 +40,18 @@ Add entries after completing a feature, resolving a production issue, or complet
 **Lesson:** For any non-Next.js Node process in the monorepo, the `dev` script must explicitly load env vars — use Node 20+'s `--env-file=../../.env` flag. For Next.js, copy or symlink the root `.env` to `apps/web/.env.local`.
 **Applies to:** DX, developer experience
 
+### 2026-07-01 — When an AC's example trigger is structurally unreachable, seed the failure state directly
+**Context:** PDF Split Session 015 — AC-21 says "if the split job fails after being queued (e.g. corrupted PDF), the page shows the ERROR state."
+**What happened:** A corrupted PDF can never actually reach the worker as a post-queue failure in this system, because `POST /api/split/jobs` runs the exact same magic-bytes check and `PDFDocument.load()` call the worker runs — corrupt files are rejected with `400` before a job is ever enqueued. Attempting to "exercise" AC-21 with a literal corrupted upload would just re-test the upload validator, not the post-queue failure path.
+**Lesson:** When a spec's example trigger turns out to be unreachable through the real flow because an earlier validation layer already prevents it, don't force a flaky or misleading test around it. Seed the target state directly (here: a `Job` row written via Prisma with `status: FAILED`, plus a Playwright `page.route()` intercept on the upload POST to point at it) so the test exercises the actual reachable code — the status endpoint and the UI's polling/ERROR-state logic — deterministically.
+**Applies to:** testing, async processing
+
+### 2026-07-01 — A required-approval branch rule isn't satisfied by a bot's "COMMENTED" review
+**Context:** Disabling CodeRabbit as a workflow gate (user instruction) while PR #3 (feature/pdf-split → develop) was open.
+**What happened:** `develop`'s branch protection requires 1 approving review. Checking PR #2's (PDF Merge) review history showed CodeRabbit's review state was `COMMENTED`, never `APPROVED` — so CodeRabbit was never actually satisfying that gate; PR #2 was merged by the repo owner directly, who bypasses branch protection as an admin (`enforce_admins: false`). Removing CodeRabbit from the workflow didn't remove a working approval source — there wasn't one — it just made the always-present gap visible.
+**Lesson:** Don't assume a status-check bot is providing what a branch protection rule asks for; check the actual review `state`, not just that the bot ran. Required-approval rules and required-status-check rules are enforced differently (and admins can bypass the former but not, by default, the latter) — verify both before assuming a PR can merge cleanly through the API.
+**Applies to:** workflow, DX
+
 ---
 
 ## Categories to Watch
@@ -73,4 +85,4 @@ The following categories commonly produce learnable moments in document-processi
 
 ---
 
-*Last updated: 2026-06-30 — Session 010 (PDF Merge Complete)*
+*Last updated: 2026-07-01 — Session 015 (PDF Split Complete)*
