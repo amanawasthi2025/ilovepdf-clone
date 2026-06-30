@@ -6,6 +6,11 @@ reviews:
       - "develop"
       - "master"
   profile: "chill"
-  request_changes_workflow: false
+  request_changes_workflow: true
+  path_filters:
+    - "!docs/**"
+    - "!**/*.md"
+    - "!prisma/migrations/**"
+    - "!**/session-notes/**"
 chat:
   auto_reply: true
