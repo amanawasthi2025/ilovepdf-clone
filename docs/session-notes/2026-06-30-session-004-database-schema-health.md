@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-30
 **Session Goal:** Add Prisma, define the Job schema, generate the TypeScript client, implement `GET /api/health`, and write unit tests for it.
-**Status:** COMPLETE ✅ (migration AC deferred — requires Docker, which is not yet installed)
+**Status:** COMPLETE ✅ (all ACs verified, including live database and health endpoint)
 
 ---
 
@@ -32,8 +32,8 @@ apps/web/package.json                          ← Added @prisma/client dependen
 | `npm run test` | ✅ 2/2 health tests pass |
 | `npm run lint` | ✅ (unchanged from Session 003) |
 | `npx prisma generate` | ✅ Client generated from schema |
-| `prisma migrate dev --name init` | ⚠️ Deferred — requires Docker/PostgreSQL |
-| `GET /api/health` live test | ⚠️ Deferred — requires Docker |
+| `prisma migrate dev --name init` | ✅ Migration applied, table created |
+| `GET /api/health` live test | ✅ Returns `{"status":"ok","database":"ok"}` |
 
 ---
 
@@ -87,30 +87,7 @@ npm 10+ requires explicit approval for package install scripts. Prisma installs 
 
 ---
 
-## Deferred Items
-
-### Migration must be run before Session 005
-
-`prisma migrate dev --name init` creates the `jobs` table in PostgreSQL. Without it, the upload API (Session 005) cannot write Job records. This is blocked by Docker.
-
-**To run when Docker is available:**
-```bash
-npm run db:migrate
-# equivalent to: prisma migrate dev
-```
-
-This will:
-1. Create `prisma/migrations/TIMESTAMP_init/migration.sql` with the CREATE TABLE statement
-2. Apply the migration to the PostgreSQL container
-3. Record the migration in Prisma's `_prisma_migrations` tracking table
-
-The `npm run db:migrate` script is defined in the root `package.json` and reads `prisma/schema.prisma` from the project root.
-
----
-
 ## Next Steps
-
-**Immediate:** Install Docker, run `docker compose up`, then run `npm run db:migrate` to complete the Session 003 and 004 database ACs.
 
 **Session 005: File Upload API**
 

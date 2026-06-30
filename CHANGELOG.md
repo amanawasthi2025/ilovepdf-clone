@@ -9,7 +9,30 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-*(Nothing yet — PDF Merge is the next feature)*
+### Added (PDF Merge — in progress)
+
+**Session 002 — Planning & ADRs (2026-06-30)**
+- `wiki/active-feature.md` — complete PDF Merge spec (file constraints, job lifecycle, 3 API contracts, worker spec, frontend state machine, 36 ACs)
+- `docs/adr/001-pdf-processing-library.md` — Decision: pdf-lib (rejected Ghostscript, PyPDF2, MuPDF)
+- `docs/adr/002-monorepo-structure.md` — Decision: Turborepo (rejected separate repos, Nx)
+- 9-session implementation breakdown (Sessions 002–010)
+
+**Session 003 — Monorepo Scaffolding (2026-06-30)**
+- Turborepo monorepo with `apps/web`, `apps/worker`, `packages/shared`
+- Next.js 14 (App Router, TypeScript, Tailwind CSS) in `apps/web`
+- `apps/worker` TypeScript service stub with SIGTERM/SIGINT handling
+- `packages/shared` with `JobStatus`, `JobType`, and `MergeJobPayload` types
+- `docker-compose.yml` — 5 services: web, worker, postgres, redis, minio (all with health checks)
+- Dev Dockerfiles for web and worker
+- Vitest configured for both apps
+
+**Session 004 — Database Schema & Health Endpoint (2026-06-30)**
+- `prisma/schema.prisma` — Job model with all fields from spec
+- `apps/web/lib/db.ts` — Prisma singleton + `checkDatabaseConnection()` helper
+- `GET /api/health` — returns 200 ok or 503 degraded based on DB reachability
+- `prisma/migrations/20260630141036_init` — initial migration applied to PostgreSQL
+- `.env` for local dev (gitignored) with all service connection strings
+- 2 unit tests covering both health states
 
 ---
 

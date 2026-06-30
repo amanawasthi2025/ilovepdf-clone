@@ -7,16 +7,44 @@
 
 ## Current Feature
 
-**Feature:** PDF Merge
-**Status:** PLANNED — begins next session
-**Branch:** `feature/pdf-merge` (to be created)
-**Started:** —
+**Feature:** PDF Merge — Session 005: File Upload API
+**Status:** IN PROGRESS
+**Branch:** `feature/pdf-merge`
+**Started:** 2026-06-30
 
 ### Description
-Allow users to upload two or more PDF files and download them combined into a single PDF. No authentication required. Full spec to be written at the start of the next session.
+Implement `POST /api/merge/jobs` — a multipart file upload endpoint that validates PDF files, stores them in MinIO, creates a Job record in PostgreSQL, and enqueues a BullMQ merge job.
 
-### Acceptance Criteria
-- TBD — to be defined at the start of the next session
+### Session Breakdown
+
+| Session | Scope | Status |
+|---|---|---|
+| 002 | Planning, spec, ADRs | ✅ Complete |
+| 003 | Monorepo scaffolding, Docker Compose | ✅ Complete |
+| 004 | Database schema, Prisma, health endpoint | ✅ Complete |
+| 005 | File Upload API (`POST /api/merge/jobs`) | 🔄 Current |
+| 006 | Worker & pdf-lib merge processor | — |
+| 007 | Job Status & Download API | — |
+| 008 | Frontend Upload UI | — |
+| 009 | Frontend Status Polling & Download | — |
+| 010 | E2E Tests, Polish, Definition of Done | — |
+
+### Completed Session ACs
+
+**Session 003 ACs (all ✅):**
+- [x] `npm run typecheck` passes on all 3 workspaces
+- [x] `npm run lint` passes on all 3 workspaces
+- [x] `npm run test --passWithNoTests` passes
+- [x] `docker compose up` — all services healthy
+
+**Session 004 ACs (all ✅):**
+- [x] `prisma/schema.prisma` matches the approved spec exactly
+- [x] `npm run db:generate` succeeds without errors
+- [x] `npm run db:migrate` creates migration file and applies to PostgreSQL
+- [x] `GET /api/health` returns `{"status":"ok","database":"ok"}` when DB is reachable
+- [x] `GET /api/health` returns `{"status":"degraded","database":"error"}` (503) when DB is unreachable
+- [x] 2 unit tests pass covering both health states
+- [x] `npm run typecheck` and `npm run test` still pass
 
 ### Blocked Items
 None.
