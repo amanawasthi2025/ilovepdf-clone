@@ -7,10 +7,28 @@
 
 ## Current Feature
 
+**Feature:** PDF Merge
+**Status:** PLANNED — begins next session
+**Branch:** `feature/pdf-merge` (to be created)
+**Started:** —
+
+### Description
+Allow users to upload two or more PDF files and download them combined into a single PDF. No authentication required. Full spec to be written at the start of the next session.
+
+### Acceptance Criteria
+- TBD — to be defined at the start of the next session
+
+### Blocked Items
+None.
+
+---
+
+## Previous Feature (Approved)
+
 **Feature:** Project Initialization & Engineering Foundation
-**Status:** IN PROGRESS
-**Branch:** `feature/project-initialization`
-**Started:** 2026-06-30
+**Status:** COMPLETE ✅
+**Branch:** `master`
+**Completed:** 2026-06-30
 
 ### Description
 Establish all project documentation, repository structure, technology stack decisions, and development process infrastructure. No application code is written in this phase.
@@ -23,9 +41,9 @@ Establish all project documentation, repository structure, technology stack deci
 - [x] `wiki/` directory created with all required documents
 - [x] `docs/adr/` created with ADR template
 - [x] `docs/session-notes/` created with first session note
-- [ ] Technology stack documented and justified in `wiki/architecture.md`
-- [ ] First feature identified, justified, and added to backlog
-- [ ] Human approval received
+- [x] Technology stack documented and justified in `wiki/architecture.md`
+- [x] First feature identified, justified, and added to backlog
+- [x] Human approval received
 
 ### Blocked Items
 None.

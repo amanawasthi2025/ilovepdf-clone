@@ -9,7 +9,7 @@
 
 | # | Feature | Completed | Version | Notes |
 |---|---|---|---|---|
-| — | — | — | — | No features completed yet |
+| 0 | Project Initialization & Engineering Foundation | 2026-06-30 | v0.0.1 | Docs, stack decisions, process. No app code. |
 
 ---
 

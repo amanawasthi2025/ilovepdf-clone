@@ -9,14 +9,25 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+*(Nothing yet — PDF Merge is the next feature)*
+
+---
+
+## [0.0.1] — 2026-06-30
+
 ### Added
-- Project repository initialized
+- Project repository initialized and pushed to GitHub (public)
 - `CLAUDE.md` — Claude Code operating manual
 - `PROJECT.md` — Product and engineering handbook
-- `TASKS.md` — Feature tracker
-- `wiki/` — Long-term project knowledge base
+- `TASKS.md` — Feature tracker with 15-item backlog
+- `CHANGELOG.md` — Release history
+- `wiki/` — 10-document long-term knowledge base (architecture, coding standards, workflow, testing strategy, roadmap, decisions, lessons learned)
 - `docs/adr/` — Architectural Decision Records directory with template
-- `docs/session-notes/` — Engineering journal
+- `docs/session-notes/` — Engineering journal with Session 001 note
+- `.gitignore` — Standard Node.js/Next.js ignores
+- Technology stack selected and fully justified
+- Development process and Git workflow defined
+- PDF Merge identified and approved as Feature 1
 
 ---
 
