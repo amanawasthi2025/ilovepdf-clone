@@ -256,7 +256,7 @@ The 409 response includes the current status:
 
 **Worker does not** clean up input or output files — same deferred scope as Merge/Split.
 
-**Implementation risk (see ADR-006):** the exact low-level pdf-lib API for reading/replacing raw XObject stream bytes has not yet been spiked against the installed `pdf-lib@^1.17.1`. Session 020 opens with a short proof-of-concept against a real fixture PDF before the full processor is written. If the public API doesn't expose enough to safely mutate stream dictionaries in place, this spec and ADR-006 will be revisited before proceeding further in that session.
+**Implementation risk (see ADR-006) — RESOLVED in Session 020:** the pdf-lib low-level API spike confirmed the approach works. Key findings, in full in "Implementation Notes (Session 020)" below: `decodePDFRawStream()` does not support `/DCTDecode` (read via `getContents()` instead); `PDFRawStream.contents` is a readonly property with a private constructor, so replacement (`context.assign(ref, PDFRawStream.of(...))`) is used instead of in-place mutation; pdf-lib exposes no API for reading a page's content-stream drawing operators, so a small hand-rolled `q`/`Q`/`cm`/`Do` tokenizer was built to resolve each image's placed size for the DPI-based downsample rule.
 
 ---
 
@@ -340,9 +340,9 @@ The feature is Done when **all** of the following are verified:
 - [ ] AC-13: When the job completes, the page transitions to the DONE state
 - [ ] AC-14: The DONE state shows a Download PDF button
 - [ ] AC-15: Clicking Download triggers a browser file download of a `.pdf` file
-- [ ] AC-16: The downloaded PDF opens and renders correctly (valid PDF, not corrupted) and contains the same page count and page order as the input
-- [ ] AC-17: For a PDF containing in-scope images (RGB/Grayscale JPEG), the compressed output is measurably smaller than the input at every level
-- [ ] AC-18: For a PDF containing no compressible content (pure text/vector), the job still completes successfully (COMPLETED, not FAILED)
+- [x] AC-16: The downloaded PDF opens and renders correctly (valid PDF, not corrupted) and contains the same page count and page order as the input
+- [x] AC-17: For a PDF containing in-scope images (RGB/Grayscale JPEG), the compressed output is measurably smaller than the input at every level
+- [x] AC-18: For a PDF containing no compressible content (pure text/vector), the job still completes successfully (COMPLETED, not FAILED)
 - [ ] AC-19: "Compress another PDF" resets the page to IDLE without a page refresh
 
 ### Error Handling
@@ -397,9 +397,41 @@ No open questions remain that block implementation, aside from the pdf-lib low-l
 |---|---|---|
 | 018 | Planning, ADR-006 & Acceptance Criteria | COMPLETE ✅ |
 | 019 | Compress API (`POST /api/compress/jobs`, validation) | COMPLETE ✅ |
-| 020 | Worker: pdf-lib Image Extraction + Sharp Recompression Processor | Not started |
+| 020 | Worker: pdf-lib Image Extraction + Sharp Recompression Processor | COMPLETE ✅ |
 | 021 | Frontend: `/compress` Upload, Level Selector, Polling & Download UI | Not started |
 | 022 | E2E Tests, Polish & Definition of Done | Not started |
+
+---
+
+## Implementation Notes (Session 020)
+
+**`decodePDFRawStream()` does not support `/DCTDecode`.** It throws `UnsupportedEncodingError` — its supported filter list (Flate/LZW/ASCII85/ASCIIHex/RunLength) covers filters that wrap other data, not terminal image codecs. DCTDecode XObject contents already *are* a complete JPEG file, so they must be read via `.getContents()` directly and handed straight to Sharp, which decodes JPEG natively.
+
+**`PDFRawStream.contents` cannot be mutated in place.** It's declared `readonly` with a private constructor (`node_modules/pdf-lib/cjs/core/objects/PDFRawStream.d.ts`) — there is no public setter. The supported way to replace a stream's bytes at an existing ref is the same mechanism pdf-lib's own `JpegEmbedder`/`PngEmbedder` use internally: `context.assign(ref, PDFRawStream.of(dict, newContents))`.
+
+**Sharp's JPEG encoder defaults to sRGB output regardless of input channel count.** A single-channel (`/DeviceGray`) raw or DCTDecode source re-encoded via `.jpeg()` comes back 3-channel/sRGB unless `.toColourspace('b-w')` is called first. Without this, a grayscale image would silently become an RGB-labeled JPEG (visually similar but semantically wrong, and roughly 3x the bytes it needs to be).
+
+**pdf-lib's `embedPng` always produces a `/DeviceRGB` XObject, even for grayscale source PNGs** (`node_modules/pdf-lib/cjs/utils/png.js` splits every decoded PNG into an RGB channel). This meant a genuine `/DeviceGray` + `/FlateDecode` test fixture couldn't be built via pdf-lib's own embedder — it had to be constructed by hand at the same low level `compress.ts` reads (`context.flateStream(...)` with `ColorSpace: 'DeviceGray'`, wired into a page's `Resources`/`Contents` manually). Real `/DeviceGray` FlateDecode images do occur in PDFs from other producers (Ghostscript, scanners), so this path is exercised even though pdf-lib itself never emits it.
+
+**No public pdf-lib API reads a page's content-stream drawing operators.** The DPI-based downsample rule needs each image's *placed* size on the page (pixel dimensions alone aren't enough — the same image can be drawn at wildly different sizes). `compress.ts` implements a minimal content-stream tokenizer that tracks only `q`/`Q` (graphics state stack) and `cm` (CTM concatenation), recording the CTM in effect at each `Do` call; placed width/height come from the magnitude of the transformed unit basis vectors (`hypot(a,b)`, `hypot(c,d)`), which is correct for rotated/skewed placements too. Verified against a fixture with the same image drawn both axis-aligned and rotated 45° at different sizes on different pages — the tokenizer correctly attributed the larger placed size.
+
+**Deliberate v1 gap: the tokenizer does not recurse into Form XObjects.** An image drawn only inside a nested `/Form` XObject (not directly on a page's content stream) will have no discovered placed size. `recompressImage()` handles this with a safe fallback: skip the DPI-based resize and fall back to quality-only JPEG re-encoding (still real compression, never risks guessing a placed size wrong and visibly over-shrinking an image that's actually drawn large). Not currently expected to be common enough to justify recursive Form-content parsing in v1; revisit if real-world uploads show otherwise.
+
+**Every recompression is compared against the original and only kept if smaller.** Pathological inputs (e.g. an already near-optimal image, or a tiny/flat image where Flate's compression already beats JPEG's fixed overhead) are left untouched rather than risk making the file larger — counted separately in the completion log (`imagesSkippedNoImprovement`) from genuinely out-of-scope images (`imagesSkippedOutOfScope`).
+
+**Manual end-to-end verification:** ran the real local stack (native Postgres/Redis/MinIO + `next dev` + the worker), submitted a 1.79MB fixture PDF (1600×1200 JPEG placed at 400×300pt, plus page text) through the live API at all three levels, and downloaded/rendered each result:
+
+| Level | Output size | Reduction |
+|---|---|---|
+| LOW | 446,029 bytes | 75.1% |
+| RECOMMENDED | 150,610 bytes | 91.6% |
+| HIGH | 27,243 bytes | 98.5% |
+
+All three downloaded PDFs opened correctly via `pdfinfo`/`pdftoppm` with the correct page count and intact page layout/text.
+
+### Tests
+
+7 new unit tests in `apps/worker/src/jobs/compress.test.ts`, deliberately using **real** pdf-lib and Sharp against generated fixture PDFs (only `db`/`storage`/`logger` are mocked) — mocking pdf-lib's low-level object API the way `split.test.ts` mocks its high-level calls would mean not testing the actual byte-level logic at all. Covers: JPEG recompression smaller at every level with page count preserved, grayscale FlateDecode recompression preserving `/DeviceGray`, a text-only PDF still completing successfully (AC-18), an out-of-scope CMYK image left untouched, and FAILED paths for invalid magic bytes / corrupt PDF / upload failure.
 
 ---
 
@@ -407,4 +439,4 @@ No open questions remain that block implementation, aside from the pdf-lib low-l
 
 **pdf-lib `EncryptedPDFError` cannot be detected via `instanceof`.** pdf-lib 1.17.1's ES5-targeted build extends the native `Error` class using a `tslib` `__extends` helper; its `super.call(this, msg)` invokes `Error` as a plain function, which returns a brand-new `Error` object rather than initializing `this` — so the resulting instance's prototype chain never includes `EncryptedPDFError.prototype`. Confirmed directly against the installed package: `new EncryptedPDFError() instanceof EncryptedPDFError` evaluates to `false`. The compress upload route therefore detects encryption via `err.message.includes('is encrypted')` instead of `instanceof`. This applies to any future code that needs to distinguish pdf-lib's typed errors from a generic load failure.
 
-*Last updated: 2026-07-01 — Session 019 (Compress API)*
+*Last updated: 2026-07-01 — Session 020 (Worker: Image Recompression Processor)*

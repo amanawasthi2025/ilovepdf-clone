@@ -11,6 +11,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (PDF Compress — In Progress)
 
+**Session 020 — Worker: pdf-lib Image Extraction + Sharp Recompression Processor (2026-07-01)**
+- `apps/worker/src/jobs/compress.ts` — the `compress` job processor: enumerates image XObjects via `pdf-lib`'s low-level object API, recompresses in-scope images (`/DCTDecode` RGB/Grayscale JPEG, `/FlateDecode` raw RGB/Grayscale bitmap) through Sharp per the selected level's max DPI and JPEG quality, leaves out-of-scope images (CMYK, Indexed, JPXDecode, CCITTFaxDecode) untouched, and saves with `useObjectStreams: true`
+- DPI-based downsampling is computed relative to each image's actual **placed size** on the page, not just its pixel dimensions — a minimal hand-rolled content-stream tokenizer tracks `q`/`Q`/`cm`/`Do` to resolve the CTM in effect at each draw call (pdf-lib has no public API for reading a page's drawing operators); correctly handles rotated placements and an image reused at different sizes across pages by keeping the largest
+- Images only reachable via a nested Form XObject (not walked in v1) fall back to quality-only JPEG re-encoding rather than guessing a resize target
+- Every recompression is compared against the original size and discarded if not smaller, so pathological inputs never make the output larger
+- `sharp` added as a dependency of `apps/worker` only (per ADR-006)
+- Wired `compress` job name into `apps/worker/src/index.ts`'s dispatcher
+- Proof-of-concept spike (opened the session, per the risk flagged in Session 018/019) confirmed the pdf-lib low-level API approach: `decodePDFRawStream()` doesn't support `/DCTDecode` (read via `getContents()` instead — it's already a complete JPEG); `PDFRawStream.contents` is readonly with a private constructor, so stream replacement uses `context.assign(ref, PDFRawStream.of(...))`, the same mechanism pdf-lib's own JPEG/PNG embedders use; Sharp's JPEG encoder defaults to sRGB output regardless of input channel count, so grayscale sources need an explicit `.toColourspace('b-w')` to stay 1-channel
+- 7 new unit tests using real pdf-lib/Sharp against generated fixture PDFs (only db/storage/logger mocked) — JPEG recompression smaller at every level, grayscale FlateDecode preserving `/DeviceGray`, text-only PDF still completing (AC-18), CMYK image left untouched, and the FAILED paths
+- Manually verified against the live local stack: a 1.79MB fixture PDF compressed to 446KB (LOW, 75.1% reduction), 151KB (RECOMMENDED, 91.6%), and 27KB (HIGH, 98.5%), with all three outputs downloading, opening, and rendering correctly with the original page count and layout intact
+
 **Session 019 — Compress API (2026-07-01)**
 - `POST /api/compress/jobs` — multipart upload (`file` + optional `level`, defaults to `RECOMMENDED`); validates MIME type, magic bytes, file size, and `level` (`LOW`/`RECOMMENDED`/`HIGH`); detects encrypted PDFs via pdf-lib load failure and returns `400 UNSUPPORTED_ENCRYPTED_PDF`; uploads to MinIO, creates a `COMPRESS` job record, enqueues a `compress` job on the shared `document-processing` queue; returns `202 { jobId }`
 - `GET /api/compress/jobs/:jobId/status` and `GET /api/compress/jobs/:jobId/download` — same contract as Merge/Split, scoped to `COMPRESS` jobs; download filename is `compressed-YYYY-MM-DD.pdf`
