@@ -18,6 +18,11 @@ vi.mock('@/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), debug: vi.fn(), warn: vi.fn() },
 }))
 
+vi.mock('@/lib/auth', () => ({
+  auth: vi.fn().mockResolvedValue(null),
+}))
+
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { getPresignedDownloadUrl } from '@/lib/storage'
 import { GET } from './route'
@@ -92,5 +97,70 @@ describe('GET /api/compress/jobs/:jobId/download', () => {
 
     expect(res.status).toBe(404)
     expect(body.error).toBe('JOB_NOT_FOUND')
+  })
+
+  it('returns 200 for an owned job when the requesting session matches the owner', async () => {
+    mockFindUnique.mockResolvedValue({
+      id: 'job-abc',
+      status: 'COMPLETED',
+      outputKey: 'outputs/abc.pdf',
+      correlationId: 'corr-123',
+      userId: 'user-123',
+    } as never)
+    mockGetPresignedUrl.mockResolvedValue('https://storage.example.com/outputs/abc.pdf?sig=xxx')
+    vi.mocked(auth).mockResolvedValueOnce({ user: { id: 'user-123' } } as never)
+
+    const res = await GET(buildRequest('job-abc'), { params: { jobId: 'job-abc' } })
+
+    expect(res.status).toBe(200)
+  })
+
+  it('returns 403 JOB_ACCESS_DENIED for an owned job when no session is present', async () => {
+    mockFindUnique.mockResolvedValue({
+      id: 'job-abc',
+      status: 'COMPLETED',
+      outputKey: 'outputs/abc.pdf',
+      correlationId: 'corr-123',
+      userId: 'user-123',
+    } as never)
+
+    const res = await GET(buildRequest('job-abc'), { params: { jobId: 'job-abc' } })
+    const body = await res.json() as Record<string, unknown>
+
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('JOB_ACCESS_DENIED')
+  })
+
+  it('returns 403 JOB_ACCESS_DENIED for an owned job requested by a different user', async () => {
+    mockFindUnique.mockResolvedValue({
+      id: 'job-abc',
+      status: 'COMPLETED',
+      outputKey: 'outputs/abc.pdf',
+      correlationId: 'corr-123',
+      userId: 'user-123',
+    } as never)
+    vi.mocked(auth).mockResolvedValueOnce({ user: { id: 'user-999' } } as never)
+
+    const res = await GET(buildRequest('job-abc'), { params: { jobId: 'job-abc' } })
+    const body = await res.json() as Record<string, unknown>
+
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('JOB_ACCESS_DENIED')
+  })
+
+  it('returns 200 for an anonymous job (userId null) regardless of session state', async () => {
+    mockFindUnique.mockResolvedValue({
+      id: 'job-abc',
+      status: 'COMPLETED',
+      outputKey: 'outputs/abc.pdf',
+      correlationId: 'corr-123',
+      userId: null,
+    } as never)
+    mockGetPresignedUrl.mockResolvedValue('https://storage.example.com/outputs/abc.pdf?sig=xxx')
+
+    const res = await GET(buildRequest('job-abc'), { params: { jobId: 'job-abc' } })
+
+    expect(res.status).toBe(200)
+    expect(auth).not.toHaveBeenCalled()
   })
 })

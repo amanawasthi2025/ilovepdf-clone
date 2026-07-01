@@ -11,6 +11,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (Job History — In Progress)
 
+**Session 028 — Schema (`Job.userId`) + Association + Ownership Enforcement (2026-07-01)**
+- `prisma/schema.prisma` — `Job` gains a nullable `userId String?` + `user User?` relation (`onDelete: Cascade`, matching the existing `Account`/`Session` pattern); `User` gains the reverse `jobs Job[]` field; migration `20260701102708_add_job_user_id` applied
+- `apps/web/app/api/{merge,split,compress}/jobs/route.ts` — each upload route now calls `auth()` before creating the `Job` row and passes `session?.user?.id` into `data.userId`; anonymous submissions leave it `undefined`/`null`, unchanged from before
+- `apps/web/app/api/{merge,split,compress}/jobs/[jobId]/{status,download}/route.ts` (6 files) — each adds one guard immediately after the existing `JOB_NOT_FOUND` check: if `job.userId` is set, the requesting session must match it or the route returns `403 JOB_ACCESS_DENIED`; if `job.userId` is `null`, the check is a no-op and behavior is identical to before this session
+- 24 new unit tests across the 9 touched route test files (association tests for the 3 upload routes; owned-matching/owned-no-session/owned-mismatched-user/anonymous-unaffected tests for the 6 status/download routes) — all pre-existing tests in these files pass unmodified (AC-19 confirmed at the unit level; E2E confirmation is Session 030)
+- `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (138 web + 16 worker, all passing) all green
+- Covers AC-01 through AC-07 of the Job History spec; `/history` page itself (AC-08–AC-15) is Session 029
+
 **Session 027 — Planning, ADR-008 & Acceptance Criteria (2026-07-01)**
 - `wiki/active-feature.md` — complete Job History spec: automatic session-based job association, per-owner authorization enforcement on the six existing status/download routes, `/history` page (Server Component, capped 50-item list, no pagination), 24 ACs
 - `docs/adr/008-job-history.md` — Decision: nullable `Job.userId` + relation, ownership enforced only when set, no retention/TTL change (rejected a separate `JobHistory` join table — no second consumer to justify duplicating `Job` as the source of truth; rejected making `userId` required — would reverse ADR-007's purely-additive auth scope)

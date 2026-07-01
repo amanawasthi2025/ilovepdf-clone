@@ -7,10 +7,10 @@
 
 ## Current Feature: Job History
 
-**Status:** PLANNING
+**Status:** IN PROGRESS (Session 028 of 030 complete)
 **Started:** 2026-07-01
 **Branch:** `feature/job-history`
-**Sessions:** 027 (planning) → 028–030 (implementation)
+**Sessions:** 027 (planning) ✅ → 028 (schema/association/ownership) ✅ → 029–030 (remaining)
 
 ---
 
@@ -148,16 +148,16 @@ No new REST endpoint is introduced — nothing else needs this data yet (YAGNI),
 
 ### Association
 
-- [ ] AC-01: A job submitted while logged in has its `Job.userId` set to that user's id
-- [ ] AC-02: A job submitted while logged out has `Job.userId` null — unchanged from today
-- [ ] AC-03: A user's history never includes jobs created before this feature shipped, or jobs created while logged out (no retroactive claiming)
+- [x] AC-01: A job submitted while logged in has its `Job.userId` set to that user's id
+- [x] AC-02: A job submitted while logged out has `Job.userId` null — unchanged from today
+- [ ] AC-03: A user's history never includes jobs created before this feature shipped, or jobs created while logged out (no retroactive claiming) — verified once `/history` exists (Session 029)
 
 ### Authorization
 
-- [ ] AC-04: Status/download for an owned job, requested by the owning user's session, succeeds exactly as before
-- [ ] AC-05: Status/download for an owned job, requested with no session, returns `403 JOB_ACCESS_DENIED`
-- [ ] AC-06: Status/download for an owned job, requested by a different logged-in user's session, returns `403 JOB_ACCESS_DENIED`
-- [ ] AC-07: Status/download for an anonymous job (`userId` null) behaves identically regardless of the requester's session state — verified for all three tool types (Merge, Split, Compress), no regression
+- [x] AC-04: Status/download for an owned job, requested by the owning user's session, succeeds exactly as before
+- [x] AC-05: Status/download for an owned job, requested with no session, returns `403 JOB_ACCESS_DENIED`
+- [x] AC-06: Status/download for an owned job, requested by a different logged-in user's session, returns `403 JOB_ACCESS_DENIED`
+- [x] AC-07: Status/download for an anonymous job (`userId` null) behaves identically regardless of the requester's session state — verified for all three tool types (Merge, Split, Compress), no regression
 
 ### History Page
 
@@ -205,7 +205,7 @@ No open questions remain that block implementation.
 | Session | Title | Status |
 |---|---|---|
 | 027 | Planning, ADR-008 & Acceptance Criteria | COMPLETE ✅ |
-| 028 | Schema (`Job.userId`) + Association (upload routes) + Ownership Enforcement (status/download routes) | Not started |
+| 028 | Schema (`Job.userId`) + Association (upload routes) + Ownership Enforcement (status/download routes) | COMPLETE ✅ |
 | 029 | Frontend: `/history` page, nav "History" link | Not started |
 | 030 | E2E Tests, Polish & Definition of Done | Not started |
 

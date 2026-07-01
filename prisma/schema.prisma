@@ -22,6 +22,8 @@ model Job {
   expiresAt        DateTime
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
+  userId           String?
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum JobType {
@@ -51,6 +53,7 @@ model User {
   updatedAt    DateTime  @updatedAt
   accounts     Account[]
   sessions     Session[]
+  jobs         Job[]
 }
 
 model Account {

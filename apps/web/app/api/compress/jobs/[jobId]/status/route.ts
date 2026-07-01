@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { logger } from '@/lib/logger'
 
@@ -14,6 +15,7 @@ export async function GET(
     createdAt: Date
     updatedAt: Date
     errorMessage: string | null
+    userId: string | null
   } | null
 
   try {
@@ -25,6 +27,7 @@ export async function GET(
         createdAt: true,
         updatedAt: true,
         errorMessage: true,
+        userId: true,
       },
     })
   } catch (err) {
@@ -40,6 +43,16 @@ export async function GET(
       { error: 'JOB_NOT_FOUND', message: `No job found with id "${jobId}".` },
       { status: 404 },
     )
+  }
+
+  if (job.userId) {
+    const session = await auth()
+    if (session?.user?.id !== job.userId) {
+      return NextResponse.json(
+        { error: 'JOB_ACCESS_DENIED', message: 'You do not have access to this job.' },
+        { status: 403 },
+      )
+    }
   }
 
   return NextResponse.json({

@@ -8,7 +8,7 @@
 ## Current Feature
 
 **Feature:** Job History
-**Status:** PLANNING
+**Status:** IN PROGRESS
 **Branch:** `feature/job-history`
 **Started:** 2026-07-01
 **Spec:** `wiki/active-feature.md`
@@ -20,12 +20,12 @@ Allow a logged-in user to see a list of their submitted Merge/Split/Compress job
 | Session | Title | Status |
 |---|---|---|
 | 027 | Planning, ADR-008 & Acceptance Criteria | COMPLETE ✅ |
-| 028 | Schema (`Job.userId`) + Association + Ownership Enforcement | Not started |
+| 028 | Schema (`Job.userId`) + Association + Ownership Enforcement | COMPLETE ✅ |
 | 029 | Frontend: `/history` page, nav "History" link | Not started |
 | 030 | E2E Tests, Polish & Definition of Done | Not started |
 
 ### Acceptance Criteria
-24 criteria defined — see `wiki/active-feature.md`. None verified yet (planning-only session).
+24 criteria defined — see `wiki/active-feature.md`. AC-01, AC-02, AC-04–AC-07 verified (unit tests); AC-20–AC-22 verified for this session's code. Remaining ACs pending Sessions 029–030.
 
 ### Blocked Items
 None.

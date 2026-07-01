@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { PDFDocument } from 'pdf-lib'
 import { CompressionLevel, JobType } from '@ilovepdf/shared'
+import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const correlationId = randomUUID()
   const expiresAt = new Date(Date.now() + env.FILE_TTL_SECONDS * 1000)
+  const session = await auth()
 
   let job: { id: string }
   try {
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         compressionLevel: level,
         correlationId,
         expiresAt,
+        userId: session?.user?.id,
       },
       select: { id: true },
     })
