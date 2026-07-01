@@ -7,7 +7,28 @@
 
 ## Current Feature
 
-**Status:** None — awaiting approval for the next feature (per the One-Feature-at-a-Time Rule)
+**Feature:** Job History
+**Status:** PLANNING
+**Branch:** `feature/job-history`
+**Started:** 2026-07-01
+**Spec:** `wiki/active-feature.md`
+
+### Description
+Allow a logged-in user to see a list of their submitted Merge/Split/Compress jobs and re-download completed outputs via a new `/history` page (ADR-008). Association is automatic based on session presence at submit time; anonymous submissions are unaffected. Once a job has an owner, its status/download endpoints require the matching session — anonymous (unowned) jobs keep working exactly as today. No change to file/job retention, no new job types, no pagination in v1.
+
+### Session Breakdown
+| Session | Title | Status |
+|---|---|---|
+| 027 | Planning, ADR-008 & Acceptance Criteria | COMPLETE ✅ |
+| 028 | Schema (`Job.userId`) + Association + Ownership Enforcement | Not started |
+| 029 | Frontend: `/history` page, nav "History" link | Not started |
+| 030 | E2E Tests, Polish & Definition of Done | Not started |
+
+### Acceptance Criteria
+24 criteria defined — see `wiki/active-feature.md`. None verified yet (planning-only session).
+
+### Blocked Items
+None.
 
 ---
 
@@ -125,25 +146,23 @@ None.
 | 1 | **PDF to Image** | Converts pages to PNG/JPG |
 | 2 | **Image to PDF** | Inverse of above |
 | 3 | **PDF Rotate** | Simple but commonly needed |
-| 4 | **Job History** | Requires auth; allows users to re-download outputs |
-| 5 | **PDF to Word** | Complex conversion; requires LibreOffice |
-| 6 | **Word to PDF** | Inverse of above |
-| 7 | **Subscription / Payments** | Monetization; requires auth |
-| 8 | **PDF Watermark** | Add text/image watermark |
-| 9 | **PDF Unlock** | Remove password protection |
-| 10 | **PDF Protect** | Add password protection |
-| 11 | **Developer API** | Programmatic access; requires auth + subscriptions |
+| 4 | **PDF to Word** | Complex conversion; requires LibreOffice |
+| 5 | **Word to PDF** | Inverse of above |
+| 6 | **Subscription / Payments** | Monetization; requires auth |
+| 7 | **PDF Watermark** | Add text/image watermark |
+| 8 | **PDF Unlock** | Remove password protection |
+| 9 | **PDF Protect** | Add password protection |
+| 10 | **Developer API** | Programmatic access; requires auth + subscriptions |
 
 ---
 
 ## Notes
 
 - Merge, Split, Compress, and User Authentication are all complete.
-- No Current Feature is in progress — awaiting explicit approval before starting the next one (per the One-Feature-at-a-Time Rule).
-- Item 4 (Job History) is now unblocked — auth has landed — and is the natural next candidate.
-- Items 5–6 require LibreOffice headless — architectural complexity increases there.
-- Items 7+ require payment infrastructure — significant scope jump.
+- Job History is now the Current Feature (planning complete, Session 027) — see above.
+- Items 4–5 require LibreOffice headless — architectural complexity increases there.
+- Items 6+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 026 (User Authentication: E2E Tests, Polish & Definition of Done — feature COMPLETE)*
+*Last updated: 2026-07-01 — Session 027 (Job History: Planning, ADR-008 & Acceptance Criteria)*

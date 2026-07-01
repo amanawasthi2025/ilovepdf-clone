@@ -5,33 +5,32 @@
 
 ---
 
-## Completed Feature: User Authentication
+## Current Feature: Job History
 
-**Status:** COMPLETE ✅
+**Status:** PLANNING
 **Started:** 2026-07-01
-**Completed:** 2026-07-01
-**Branch:** `feature/user-auth`
-**Sessions:** 023 (planning) → 024–026 (implementation)
+**Branch:** `feature/job-history`
+**Sessions:** 027 (planning) → 028–030 (implementation)
 
 ---
 
 ## Feature Summary
 
-Allow a user to create an account with an email and password, log in, and log out, through a browser interface. Session state is tracked via a signed JWT cookie (see ADR-007 Addendum — Auth.js forces JWT strategy for Credentials-only setups). This feature is purely additive infrastructure: Merge, Split, and Compress remain fully anonymous and unchanged — no tool route requires a session. The only new user-facing surface is the signup/login forms and a session-aware nav (shows the logged-in user's email and a logout control when a session exists; shows "Log in" / "Sign up" links otherwise).
+Allow a logged-in user to see a list of the document-processing jobs they've submitted (Merge, Split, Compress) and re-download completed outputs, through a new `/history` page. Association is automatic: any job submitted while a session exists gets silently tagged with that user's id at creation time; anonymous submissions are completely unaffected. Once a job belongs to a user, its status/download endpoints require the requesting session to match that owner — anonymous (unowned) jobs keep working exactly as they do today, by `jobId` alone. This feature reuses the entire existing Merge/Split/Compress pipeline (upload → queue → worker → storage → status/download) with no new job types, no new worker code, and no change to file retention.
 
 **Why this feature next:**
-- Backlog priority #1 (`TASKS.md`) — the anonymous no-auth tool set (Merge/Split/Compress) is proven; PROJECT.md's Medium-Term goals name "user accounts" as the next step
-- Unlocks the future Job History feature (backlog #5), which requires a `User` to associate jobs with
-- `wiki/architecture.md` already named Auth.js (NextAuth v5) as the planned library — this feature acts on a decision already made, not a new one
+- `PROJECT.md`'s Medium-Term goals name "user accounts and job history" together — accounts (ADR-007) landed in the previous feature specifically to unblock this one
+- `TASKS.md`'s Future Backlog names Job History as the item that becomes unblocked once auth lands, which it now has
 
 **Explicitly out of scope for this pass (user-confirmed 2026-07-01):**
-- Gating Merge/Split/Compress behind login — they stay anonymous
-- OAuth providers (Google/GitHub) — email/password only
-- Email verification
-- Password reset flow
-- Any account/profile page — no new UI beyond the auth forms and session-aware nav
+- Any change to file/job retention — no TTL cleanup worker is introduced; outputs remain retained exactly as indefinitely as they already are today (a pre-existing, separately-tracked gap — see Known Limitations in `wiki/completed-features.md` for Merge/Split/Compress)
+- Explicit "save to history" opt-in UI — association is fully automatic based on session presence at submit time
+- Pagination, filtering, or search on the history list — a simple capped list (most recent 50) only
+- Retroactively claiming jobs created before this feature shipped, or jobs created while logged out
+- Deleting a job from history (and its underlying file) — not requested; a future account-management feature could own this
+- Live polling of in-progress jobs within the history list — the list reflects the state at page load; a page refresh shows updates (each tool's own page already provides live polling during an active session)
 
-These are known limitations, not gaps — see ADR-007 for the reasoning.
+These are known limitations, not gaps — see ADR-008 for the reasoning behind the retention and authorization decisions specifically.
 
 ---
 
@@ -39,50 +38,34 @@ These are known limitations, not gaps — see ADR-007 for the reasoning.
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Auth library | Auth.js v5 (`next-auth`) + `@auth/prisma-adapter` | Already the planned choice in `wiki/architecture.md`; see ADR-007 |
-| Auth method | Email/password only (Credentials provider) | No external OAuth app registration needed; user-confirmed scope |
-| Session strategy | JWT (forced by Auth.js — Credentials provider only supports JWT when no other provider is configured) | See ADR-007 Addendum (Session 024); `@auth/prisma-adapter` stays wired up for future OAuth, `Session` table remains provisioned but unused for now |
-| Password hashing | `bcryptjs` (pure JS, no native compilation) | Avoids a second native-binding dependency (worker already has one: `sharp`, ADR-006); see ADR-007 |
-| Email verification | Not implemented | YAGNI — no transactional email provider dependency needed yet; user-confirmed |
-| Password reset | Not implemented | Same reasoning as email verification; deferred, not a blocker |
-| Tool gating | None — Merge/Split/Compress stay anonymous | User-confirmed; this feature is additive only |
-| New user-facing surface | Signup form, login form, session-aware nav only | User-confirmed; no account/profile page yet (belongs to future Job History feature) |
-
-### Password Requirements
-
-| Rule | Value |
-|---|---|
-| Minimum length | 8 characters |
-| Maximum length | 72 characters (bcrypt's own input limit) |
-| Complexity | None enforced beyond length — composition rules (must contain a symbol, etc.) are a well-documented anti-pattern (NIST SP 800-63B) that push users toward predictable patterns; length is the more effective signal |
-
-### Email Requirements
-
-- Must pass a standard email-format check (Zod's `.email()`)
-- Stored lowercased and trimmed; uniqueness enforced case-insensitively at the DB level (`citext` is not currently used elsewhere in this schema, so uniqueness is enforced by always lowercasing before every read/write, backed by a unique index on the stored lowercase value)
-- Duplicate signup attempt returns a generic `409 EMAIL_ALREADY_REGISTERED` — no user enumeration beyond confirming the email is taken, which is unavoidable with this error shape and accepted as a standard trade-off for a first version (mitigating it requires a verification-email flow, which is explicitly out of scope)
-
----
-
-## Constraints
-
-### Rate Limiting
-
-Not implemented for this pass, consistent with Merge/Split/Compress. Noted as a known gap for login/signup specifically (brute-force protection) — acceptable for now since there is no sensitive data behind an account yet (no Job History, no payments), revisit when either lands.
-
-### Session Duration
-
-30 days, matching Auth.js's own default `session.maxAge` — now the JWT cookie's own expiry (see ADR-007 Addendum) rather than a `Session` table row's `expires` column. No "remember me" toggle in v1 — one session duration for all logins.
-
-### CSRF / Cookie Security
-
-Handled by Auth.js itself (built-in CSRF token handling for the credentials flow, HTTP-only session cookie, `SameSite=Lax`). No custom implementation needed.
+| Retention/TTL | No change | Outputs already persist indefinitely in practice (no cleanup worker has ever existed); building one is a separate, larger effort not requested here — see ADR-008 |
+| Authorization boundary | Enforced once a job has an owner | If `Job.userId` is set, status/download require the matching session (`403` otherwise); jobs with `userId` null (anonymous) are completely unaffected — see ADR-008 |
+| Association | Automatic, based on session at submit time | No new UI on the existing tool pages; anonymous submission stays anonymous exactly as today |
+| History page scope | Simple capped list (most recent 50) | No pagination/filtering/search in v1 — no evidence yet that users will accumulate enough jobs to need it (YAGNI) |
+| List page implementation | Server Component querying Prisma directly | Mirrors `components/nav.tsx`'s existing pattern (reads `auth()` and DB state directly); no new `/api/jobs` REST endpoint needed since nothing else consumes this data yet |
 
 ---
 
 ## Database Schema
 
 ```prisma
+model Job {
+  id               String            @id @default(cuid())
+  jobType          JobType
+  status           JobStatus         @default(PENDING)
+  inputKeys        String[]
+  outputKey        String?
+  splitRanges      String?
+  compressionLevel CompressionLevel?
+  errorMessage     String?
+  correlationId    String            @unique
+  expiresAt        DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  userId           String?
+  user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -91,162 +74,116 @@ model User {
   updatedAt    DateTime  @updatedAt
   accounts     Account[]
   sessions     Session[]
-}
-
-// Auth.js's required adapter shape (Account, Session, VerificationToken)
-// provisioned now per ADR-007, all three unused in v1 (session strategy is JWT,
-// not database — see ADR-007 Addendum) — avoids a schema-rewrite migration if
-// OAuth/email-verification/database-sessions are added later.
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  jobs         Job[]
 }
 ```
 
-**Schema changes from Compress:**
-- Four new models: `User`, `Account`, `Session`, `VerificationToken` — the exact shape `@auth/prisma-adapter` requires, with `User.passwordHash` added as a project-specific field (Auth.js does not implement credential storage itself)
-- `Job` is completely untouched — no foreign key to `User` in this pass; anonymous `jobId`-based access for Merge/Split/Compress is unaffected
-- `Account`/`VerificationToken`/`Session` are provisioned but unused until OAuth/email-verification/database-sessions are added (see ADR-007 and its Addendum)
+**Schema changes from User Authentication:**
+- `Job` gains a nullable `userId` + `user` relation (`onDelete: Cascade`, matching the existing `Account`/`Session` pattern) — anonymous jobs (the vast majority today) keep `userId` null and are entirely unaffected
+- `User` gains the reverse `jobs Job[]` field
+- No new models, no new enums, no changes to `expiresAt`'s meaning or enforcement (still unenforced, unchanged from every prior feature)
 
 ---
 
 ## API Contract
 
-### POST /api/auth/signup
+### `POST /api/{merge,split,compress}/jobs` (existing routes — behavior change)
 
-Custom route (Auth.js does not provide a signup flow — only session/login machinery).
+Each of the three upload routes now calls `auth()` before creating the `Job` row and passes the session's user id into `prisma.job.create`'s `userId` field (omitted/`null` when no session exists). No change to request/response shape, status codes, or error codes — this is invisible to the caller.
 
-**Request:** `multipart/form-data` is not needed here (no file upload) — plain JSON.
+### `GET /api/{merge,split,compress}/jobs/:jobId/status` and `.../download` (existing routes — behavior change)
+
+Immediately after the existing `JOB_NOT_FOUND` check, each handler adds one guard:
+
+- If `job.userId` is `null` — proceed exactly as today, no session check, no behavior change.
+- If `job.userId` is set — call `auth()`; if no session exists, or the session's user id doesn't match `job.userId`, return:
+
 ```json
-{ "email": "user@example.com", "password": "at-least-8-chars" }
+{ "error": "JOB_ACCESS_DENIED", "message": "You do not have access to this job." }
+```
+with status `403`.
+
+Owner requests proceed exactly as today (same response shapes as already documented for each tool).
+
+### `/history` page (new — not a REST endpoint)
+
+A Server Component, not an API route. Calls `auth()` directly; if no session exists, redirects to `/login` via Next.js's `redirect()`. If a session exists, queries:
+
+```ts
+prisma.job.findMany({
+  where: { userId: session.user.id },
+  orderBy: { createdAt: 'desc' },
+  take: 50,
+  select: { id: true, jobType: true, status: true, createdAt: true, errorMessage: true },
+})
 ```
 
-**Success — 201 Created:**
-```json
-{ "id": "clx...", "email": "user@example.com" }
-```
-No password or hash in the response. Signup does **not** automatically log the user in — a separate login step is required, matching the "no new surface beyond the forms" scope (an auto-login would require wiring the Auth.js session-creation path into a non-Auth.js route handler, extra complexity not justified for v1).
-
-**Errors:**
-| Status | Error Code | Condition |
-|---|---|---|
-| 400 | `INVALID_EMAIL` | Email fails format validation |
-| 400 | `PASSWORD_TOO_SHORT` | Password under 8 characters |
-| 400 | `PASSWORD_TOO_LONG` | Password over 72 characters |
-| 409 | `EMAIL_ALREADY_REGISTERED` | Email already has an account |
-
-### Auth.js route handlers — `/api/auth/[...nextauth]`
-
-Standard Auth.js catch-all route handling `signIn`, `signOut`, `session`, and CSRF endpoints. Configured with:
-- `CredentialsProvider` — `authorize()` looks up `User` by lowercased email, compares `bcryptjs.compare(password, user.passwordHash)`, returns the user object (minus `passwordHash`) on match or `null` on failure (Auth.js maps a `null` return to a generic auth failure — no distinction between "no such email" and "wrong password" is surfaced to the client, standard practice against user enumeration)
-- `@auth/prisma-adapter` — wired up for future OAuth (unused by the Credentials + JWT path itself); see ADR-007 Addendum
-- `session.strategy: 'jwt'`, `session.maxAge: 30 days` (corrected from `'database'` in Session 024 — see ADR-007 Addendum: Auth.js rejects database sessions when Credentials is the only provider)
-
-### Session check (server components / route handlers)
-
-Any server component or route handler that needs to know the current session calls Auth.js's `auth()` helper, which reads and verifies the JWT session cookie. No new API endpoint — this is a library-provided helper, not a route.
+No new REST endpoint is introduced — nothing else needs this data yet (YAGNI), consistent with `components/nav.tsx`'s existing direct-DB-read pattern.
 
 ---
 
 ## Frontend Specification
 
-### `/signup`
+### `/history`
 
-- Email + password fields, client-side validation mirrors the API's rules (length, email format) for immediate feedback, but the API is the source of truth
-- Submit button disabled until both fields pass client-side checks
-- On `201`: redirect to `/login` with a success message ("Account created — log in to continue")
-- On `409 EMAIL_ALREADY_REGISTERED`: inline error under the email field ("An account with this email already exists")
-- On other 4xx/5xx: generic error banner, same pattern as Merge/Split/Compress's upload-error banner
+- Server Component; redirects to `/login` if no session (mirrors the existing unauthenticated-access pattern — no new middleware)
+- Reverse-chronological list of the current user's own jobs (job type, status, created date)
+- `COMPLETED` rows render a small client "Download" control that, on click, fetches `GET /api/{type}/jobs/:id/download` (the same per-type endpoint each tool page already calls) and navigates the browser to the returned pre-signed URL — reused across rows, parameterized by `jobType`, not a new download mechanism
+- `FAILED` rows show the job's `errorMessage`
+- `PENDING`/`PROCESSING` rows show their status as plain text — no polling; a page refresh reflects any status change (see Explicitly out of scope)
+- Capped to the 50 most recent jobs, no pagination controls
 
-### `/login`
+### Nav
 
-- Email + password fields, calls Auth.js's `signIn('credentials', { email, password, redirect: false })`
-- On success: redirect to `/` (home)
-- On failure: generic error banner ("Invalid email or password") — deliberately not specific about which field is wrong, per the API's no-enumeration behavior
+- `components/nav.tsx` gains a "History" link, shown only when a session exists, alongside the existing email + "Log out" control
+- No change to the logged-out state (still "Log in"/"Sign up" only)
 
-### Session-aware nav
+### `/merge`, `/split`, `/compress`
 
-- Server component reads the session via `auth()`
-- Logged in: shows the user's email and a "Log out" control (calls Auth.js's `signOut()`)
-- Logged out: shows "Log in" and "Sign up" links
-- No changes to `/merge`, `/split`, `/compress` — they render identically regardless of session state
+- No visible changes. Their upload routes now tag the created job with a `userId` when logged in, but this is invisible to the submitting user — the existing IDLE → UPLOADING → PROCESSING → DONE/ERROR flow, polling, and download behavior are unchanged.
 
 ---
 
 ## Acceptance Criteria
 
-### Signup
+### Association
 
-- [x] AC-01: User can navigate to `/signup` and see email + password fields
-- [x] AC-02: Submit button is disabled until email and password pass client-side validation
-- [x] AC-03: Submitting a valid new email/password creates a `User` row with a bcrypt password hash (never the plaintext password) and redirects to `/login` with a success message
-- [x] AC-04: Submitting an already-registered email shows an inline "email already exists" error and does not create a duplicate `User` row
-- [x] AC-05: Submitting a password under 8 characters is rejected by the API with `PASSWORD_TOO_SHORT`
-- [x] AC-06: Submitting a malformed email is rejected by the API with `INVALID_EMAIL`
-- [x] AC-07: Email is stored lowercased regardless of the casing typed by the user
-- [x] AC-08: A network failure during signup shows a generic error banner and does not lose the entered form values
+- [ ] AC-01: A job submitted while logged in has its `Job.userId` set to that user's id
+- [ ] AC-02: A job submitted while logged out has `Job.userId` null — unchanged from today
+- [ ] AC-03: A user's history never includes jobs created before this feature shipped, or jobs created while logged out (no retroactive claiming)
 
-### Login
+### Authorization
 
-- [x] AC-09: User can navigate to `/login` and see email + password fields
-- [x] AC-10: Submitting correct credentials for an existing account logs the user in and redirects to `/`
-- [x] AC-11: Submitting an incorrect password shows a generic "Invalid email or password" error (no indication of which field is wrong)
-- [x] AC-12: Submitting an email with no matching account shows the same generic error as AC-11 (no user enumeration)
-- [x] AC-13: A successful login sets a signed JWT session cookie with a 30-day expiry (corrected from "creates a `Session` row" in Session 024 — see ADR-007 Addendum)
-- [x] AC-14: The session cookie is HTTP-only and not readable via `document.cookie` in the browser
+- [ ] AC-04: Status/download for an owned job, requested by the owning user's session, succeeds exactly as before
+- [ ] AC-05: Status/download for an owned job, requested with no session, returns `403 JOB_ACCESS_DENIED`
+- [ ] AC-06: Status/download for an owned job, requested by a different logged-in user's session, returns `403 JOB_ACCESS_DENIED`
+- [ ] AC-07: Status/download for an anonymous job (`userId` null) behaves identically regardless of the requester's session state — verified for all three tool types (Merge, Split, Compress), no regression
 
-### Session & Nav
+### History Page
 
-- [x] AC-15: When logged in, the nav shows the user's email and a "Log out" control on every page
-- [x] AC-16: When logged out, the nav shows "Log in" and "Sign up" links on every page
-- [x] AC-17: Clicking "Log out" clears the session cookie (Auth.js `signOut()`), redirects to `/`, and the nav reverts to the logged-out state (corrected from "deletes the `Session` row" in Session 024 — see ADR-007 Addendum)
-- [x] AC-18: A logged-in session persists across a full page reload (server-rendered nav reflects the session on first paint, no client-side flash of the logged-out state)
-- [x] AC-19: An expired or tampered session cookie is treated as logged-out without an error page (corrected from "expired or deleted session" in Session 024 — see ADR-007 Addendum)
+- [ ] AC-08: Visiting `/history` while logged in shows the user's own jobs, most recent first
+- [ ] AC-09: Each row shows job type, status, and created date
+- [ ] AC-10: A `COMPLETED` row's download control successfully downloads the correct output file
+- [ ] AC-11: A `FAILED` row shows its error message
+- [ ] AC-12: The list is capped to the 50 most recent jobs
+- [ ] AC-13: Visiting `/history` while logged out redirects to `/login`
+- [ ] AC-14: A user's history never shows another user's jobs or anonymous jobs
+- [ ] AC-15: Nav shows a "History" link only when logged in
 
 ### Anonymous Tools Unaffected
 
-- [x] AC-20: `/merge` functions identically whether the visitor is logged in or logged out
-- [x] AC-21: `/split` functions identically whether the visitor is logged in or logged out
-- [x] AC-22: `/compress` functions identically whether the visitor is logged in or logged out
-- [x] AC-23: No existing Merge/Split/Compress API route requires a session
+- [ ] AC-16: `/merge` functions identically whether the visitor is logged in or logged out
+- [ ] AC-17: `/split` functions identically whether the visitor is logged in or logged out
+- [ ] AC-18: `/compress` functions identically whether the visitor is logged in or logged out
+- [ ] AC-19: All pre-existing Merge/Split/Compress unit, integration, and E2E tests continue to pass unmodified
 
 ### Quality
 
-- [x] AC-24: `npm run typecheck` exits with 0 errors
-- [x] AC-25: `npm run lint` exits with 0 errors/warnings
-- [x] AC-26: `npm run test` passes all unit and integration tests
-- [x] AC-27: Playwright E2E test passes: sign up → login → nav shows logged-in state → reload persists session → logout → nav shows logged-out state
-- [x] AC-28: Playwright E2E test passes: duplicate-email signup and wrong-password login both show their respective error states without crashing
+- [ ] AC-20: `npm run typecheck` exits with 0 errors
+- [ ] AC-21: `npm run lint` exits with 0 errors/warnings
+- [ ] AC-22: `npm run test` passes all unit and integration tests
+- [ ] AC-23: Playwright E2E test passes: submit a job while logged in → job appears in `/history` with correct type/status → download succeeds
+- [ ] AC-24: Playwright E2E test passes: `/history` redirects to `/login` when logged out; a job owned by one user returns `403` when its status/download endpoint is requested using a different user's session
 
 ---
 
@@ -254,13 +191,10 @@ Any server component or route handler that needs to know the current session cal
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Auth library | Auth.js v5 + Prisma adapter | Already the planned choice in `wiki/architecture.md`; see ADR-007 |
-| Auth method scope | Email/password only | User-confirmed; avoids external OAuth app setup dependency |
-| Session strategy | JWT (corrected from database sessions in Session 024) | Auth.js forces JWT strategy for Credentials-only providers; see ADR-007 Addendum |
-| Email verification | Deferred | YAGNI — no email-sending dependency needed yet |
-| Should Merge/Split/Compress require login | No — stay anonymous | User-confirmed; this feature is additive infrastructure only |
-| New UI beyond auth forms | None (no account page) | User-confirmed; strict YAGNI, Job History will own that surface later |
-| Password hashing | `bcryptjs` (pure JS) | Avoids a second native-binding dependency; see ADR-007 |
+| Should file/job retention change? | No | Already indefinite in practice; a real TTL worker is a separate, larger effort — see ADR-008 |
+| Should ownership become an enforced access boundary? | Yes, once a job has an owner | Closes a real (if minor) information-disclosure gap for authenticated users without touching anonymous jobs — see ADR-008 |
+| How does a job get associated with a user? | Automatically, based on session at submit time | No new UI on existing tool pages; avoids scope creep beyond the backlog item |
+| Should the history page have pagination/filtering in v1? | No — simple capped list | No evidence yet of need; YAGNI |
 
 No open questions remain that block implementation.
 
@@ -270,38 +204,10 @@ No open questions remain that block implementation.
 
 | Session | Title | Status |
 |---|---|---|
-| 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
-| 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | COMPLETE ✅ |
-| 025 | Frontend: `/signup`, `/login`, session-aware nav | COMPLETE ✅ |
-| 026 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
-
----
-
-## Implementation Notes (Session 024)
-
-- Session strategy corrected from database to JWT mid-session — see ADR-007 Addendum. All references to "Session row"/"database sessions" throughout this document have been updated to describe JWT cookie behavior instead.
-- Auth.js's default `session` callback already surfaces `email` on `session.user` with no custom callback needed — confirmed via manual `GET /api/auth/session` verification against a real login.
-- `authorizeCredentials()` is exported separately from the Auth.js config object in `lib/auth.ts` specifically so it has a direct unit test without needing to mock the whole Auth.js request pipeline.
-
----
-
-## Implementation Notes (Session 025)
-
-- `components/nav.tsx` is a new top-level `components/` directory (first shared cross-page component in the project) — an `async` Server Component reading `auth()` directly, rendered from `app/layout.tsx` above `<Providers>` so it appears on every route unconditionally.
-- Logout is a server action (`'use server'` inline in the nav's `<form action={...}>`) calling the server-side `signOut` exported from `lib/auth.ts` — no client JS needed for logout, and `Providers`/`app/providers.tsx` did not need a `SessionProvider` added (confirmed by reading `next-auth/react`'s source: `signIn`/`signOut` don't touch `SessionContext`, only `useSession` does, and the nav never calls `useSession`).
-- **Bug found during manual verification, fixed before sign-off:** after a successful client-side `signIn('credentials', { redirect: false })`, using `router.push('/')` left the nav showing the stale logged-out state — Next.js App Router's client Router Cache reuses the previously-rendered root layout (where `Nav` lives) across a soft navigation instead of re-invoking `auth()`, even though the new session cookie was already set correctly. `router.refresh()` before the push did not fix it either. Root-caused via a scripted Playwright session (not just the eventual E2E suite) that inspected the nav's rendered HTML immediately after login vs. after a hard reload — the hard reload always showed the correct state, isolating the bug to router-cache staleness rather than the cookie/session itself. Fixed by using `window.location.href = '/'` for the post-login redirect instead of `router.push`, matching the same full-round-trip behavior already used by the logout server action (which was unaffected by this bug). See `app/login/page.tsx`.
-- Signup's client-side validation (`app/signup/validation.ts`) reuses `zod`'s `.email()` check — the exact same validator the API route already uses — instead of a hand-rolled regex, so client and server can't drift.
-- Login has no dedicated validation module: the spec's client-validation requirement (AC-02) applies only to signup; login's submit button is gated on non-empty fields only, per the ACs.
-- AC-19 (tampered/expired cookie treated as logged-out, no error page) was verified directly rather than assumed from "Auth.js handles it": sent a request with a garbage `authjs.session-token` cookie value and confirmed a `200` response with the nav in its logged-out state.
-
----
-
-## Implementation Notes (Session 026)
-
-- `apps/web/e2e/auth.spec.ts` — two Playwright specs against the real signup/login/logout flow (no route mocking, unlike the error-path specs in the other tool suites): AC-27's full happy path (signup → login → nav shows email + "Log out" → cookie confirmed unreadable via `document.cookie` → reload persists the session with no logged-out flash → logout reverts the nav) and AC-28's two error states (duplicate-email signup shows the inline error with the form intact; wrong-password login shows the generic banner) in one spec, since both share the same "already-registered user" setup.
-- Each test creates its own randomly-suffixed email (`e2e-auth-<uuid>@example.com`) and deletes that `User` row in a `finally` block, matching the try/finally cleanup convention already used by `compress.spec.ts` for seeded `Job` rows — no shared/global test user, no cross-test ordering dependency.
-- Ran the full Definition of Done checklist against the real local stack (native Postgres/Redis/MinIO per ADR-004, `next dev`, worker's `npm run dev`): `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (124/124 — 108 web + 16 worker), `npx playwright test` (13/13 — 2 new auth specs + the 11 pre-existing Merge/Split/Compress specs, no regressions). Confirmed no leftover test users in Postgres after the run.
-- All 28 acceptance criteria are now verified. User Authentication is feature-complete.
+| 027 | Planning, ADR-008 & Acceptance Criteria | COMPLETE ✅ |
+| 028 | Schema (`Job.userId`) + Association (upload routes) + Ownership Enforcement (status/download routes) | Not started |
+| 029 | Frontend: `/history` page, nav "History" link | Not started |
+| 030 | E2E Tests, Polish & Definition of Done | Not started |
 
 ---
 

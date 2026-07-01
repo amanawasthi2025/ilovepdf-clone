@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.0] — 2026-07-01
+
+### Added (Job History — In Progress)
+
+**Session 027 — Planning, ADR-008 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — complete Job History spec: automatic session-based job association, per-owner authorization enforcement on the six existing status/download routes, `/history` page (Server Component, capped 50-item list, no pagination), 24 ACs
+- `docs/adr/008-job-history.md` — Decision: nullable `Job.userId` + relation, ownership enforced only when set, no retention/TTL change (rejected a separate `JobHistory` join table — no second consumer to justify duplicating `Job` as the source of truth; rejected making `userId` required — would reverse ADR-007's purely-additive auth scope)
+- 4-session implementation breakdown (Sessions 027–030)
+- User-confirmed scope, ahead of any code: no change to file retention (already indefinite in practice, a real TTL worker is a separate future effort); ownership becomes an enforced access boundary on status/download once set; association is fully automatic (no opt-in UI); history page is a simple capped list, no pagination/filtering in v1
+
+---
+
 ## [0.4.0] — 2026-07-01
 
 ### Added (User Authentication)
