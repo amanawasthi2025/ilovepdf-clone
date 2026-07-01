@@ -9,7 +9,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.4.0] — 2026-07-01
 
-### Added (User Authentication — In Progress)
+### Added (User Authentication)
+
+**Session 026 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/auth.spec.ts` — 2 new Playwright E2E specs: full signup → login → nav-shows-logged-in-state → reload-persists-session → logout flow (AC-27), and duplicate-email-signup / wrong-password-login error states (AC-28). Each test creates its own uniquely-suffixed `User` and deletes it in a `finally` block, matching the try/finally seeded-row cleanup convention already used by `compress.spec.ts`
+- Ran the full Definition of Done checklist against the real local stack (native Postgres/Redis/MinIO per ADR-004, `next dev`, worker `npm run dev`): `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (124/124 — 108 web + 16 worker), `npx playwright test` (13/13 — 2 new auth specs + 11 pre-existing Merge/Split/Compress specs, no regressions)
+- All 28 acceptance criteria now verified — User Authentication is feature-complete
+- `TASKS.md`, `wiki/active-feature.md`, `wiki/completed-features.md` updated to mark the feature Done; Current Feature reset to none pending explicit approval for the next feature (per the One-Feature-at-a-Time Rule)
 
 **Session 025 — Frontend: `/signup`, `/login`, session-aware nav (2026-07-01)**
 - `apps/web/app/signup/page.tsx` + `validation.ts`/`.test.ts` — signup form; submit disabled until email (Zod `.email()`, mirrors the API) and password (8–72 chars) are valid; `201` → redirect to `/login?signup=success`; `409` → inline "email already exists" under the email field; other errors → generic banner; entered values survive a network failure

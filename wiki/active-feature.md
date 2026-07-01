@@ -5,10 +5,11 @@
 
 ---
 
-## Current Feature: User Authentication
+## Completed Feature: User Authentication
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE ✅
 **Started:** 2026-07-01
+**Completed:** 2026-07-01
 **Branch:** `feature/user-auth`
 **Sessions:** 023 (planning) → 024–026 (implementation)
 
@@ -241,11 +242,11 @@ Any server component or route handler that needs to know the current session cal
 
 ### Quality
 
-- [ ] AC-24: `npm run typecheck` exits with 0 errors
-- [ ] AC-25: `npm run lint` exits with 0 errors/warnings
-- [ ] AC-26: `npm run test` passes all unit and integration tests
-- [ ] AC-27: Playwright E2E test passes: sign up → login → nav shows logged-in state → reload persists session → logout → nav shows logged-out state
-- [ ] AC-28: Playwright E2E test passes: duplicate-email signup and wrong-password login both show their respective error states without crashing
+- [x] AC-24: `npm run typecheck` exits with 0 errors
+- [x] AC-25: `npm run lint` exits with 0 errors/warnings
+- [x] AC-26: `npm run test` passes all unit and integration tests
+- [x] AC-27: Playwright E2E test passes: sign up → login → nav shows logged-in state → reload persists session → logout → nav shows logged-out state
+- [x] AC-28: Playwright E2E test passes: duplicate-email signup and wrong-password login both show their respective error states without crashing
 
 ---
 
@@ -272,7 +273,7 @@ No open questions remain that block implementation.
 | 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
 | 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | COMPLETE ✅ |
 | 025 | Frontend: `/signup`, `/login`, session-aware nav | COMPLETE ✅ |
-| 026 | E2E Tests, Polish & Definition of Done | Not started |
+| 026 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ---
 
@@ -292,6 +293,15 @@ No open questions remain that block implementation.
 - Signup's client-side validation (`app/signup/validation.ts`) reuses `zod`'s `.email()` check — the exact same validator the API route already uses — instead of a hand-rolled regex, so client and server can't drift.
 - Login has no dedicated validation module: the spec's client-validation requirement (AC-02) applies only to signup; login's submit button is gated on non-empty fields only, per the ACs.
 - AC-19 (tampered/expired cookie treated as logged-out, no error page) was verified directly rather than assumed from "Auth.js handles it": sent a request with a garbage `authjs.session-token` cookie value and confirmed a `200` response with the nav in its logged-out state.
+
+---
+
+## Implementation Notes (Session 026)
+
+- `apps/web/e2e/auth.spec.ts` — two Playwright specs against the real signup/login/logout flow (no route mocking, unlike the error-path specs in the other tool suites): AC-27's full happy path (signup → login → nav shows email + "Log out" → cookie confirmed unreadable via `document.cookie` → reload persists the session with no logged-out flash → logout reverts the nav) and AC-28's two error states (duplicate-email signup shows the inline error with the form intact; wrong-password login shows the generic banner) in one spec, since both share the same "already-registered user" setup.
+- Each test creates its own randomly-suffixed email (`e2e-auth-<uuid>@example.com`) and deletes that `User` row in a `finally` block, matching the try/finally cleanup convention already used by `compress.spec.ts` for seeded `Job` rows — no shared/global test user, no cross-test ordering dependency.
+- Ran the full Definition of Done checklist against the real local stack (native Postgres/Redis/MinIO per ADR-004, `next dev`, worker's `npm run dev`): `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (124/124 — 108 web + 16 worker), `npx playwright test` (13/13 — 2 new auth specs + the 11 pre-existing Merge/Split/Compress specs, no regressions). Confirmed no leftover test users in Postgres after the run.
+- All 28 acceptance criteria are now verified. User Authentication is feature-complete.
 
 ---
 

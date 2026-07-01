@@ -7,10 +7,16 @@
 
 ## Current Feature
 
+**Status:** None — awaiting approval for the next feature (per the One-Feature-at-a-Time Rule)
+
+---
+
+## Previous Feature (Approved)
+
 **Feature:** User Authentication
-**Status:** IN PROGRESS
+**Status:** COMPLETE ✅
 **Branch:** `feature/user-auth`
-**Started:** 2026-07-01
+**Completed:** 2026-07-01
 **Spec:** `wiki/active-feature.md`
 
 ### Description
@@ -22,17 +28,15 @@ Allow a user to sign up with email/password, log in, and log out through a brows
 | 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
 | 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | COMPLETE ✅ |
 | 025 | Frontend: `/signup`, `/login`, session-aware nav | COMPLETE ✅ |
-| 026 | E2E Tests, Polish & Definition of Done | Not started |
+| 026 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ### Acceptance Criteria
-28 criteria defined — see `wiki/active-feature.md`. AC-03–AC-07, AC-09–AC-14, AC-23 verified in Session 024; AC-01, AC-02, AC-08, AC-15–AC-22 verified this session via manual Playwright-driven browser testing (23 of 28). Remaining: AC-24–AC-28 (quality-gate re-verification + the two Playwright E2E specs), covered by Session 026.
+All 28 criteria verified — see `wiki/active-feature.md`.
 
 ### Blocked Items
 None.
 
 ---
-
-## Previous Feature (Approved)
 
 **Feature:** PDF Compress
 **Status:** COMPLETE ✅
@@ -107,6 +111,7 @@ None.
 | 1 | PDF Merge | 2026-06-30 | Full pipeline; 36 ACs; 25 unit tests + 1 E2E |
 | 2 | PDF Split | 2026-07-01 | Custom ranges, ZIP output; 38 ACs; 75 unit tests + 4 E2E |
 | 3 | PDF Compress | 2026-07-01 | pdf-lib + Sharp image recompression, 3 levels; 40 ACs; 104 unit tests + 11 E2E |
+| 4 | User Authentication | 2026-07-01 | Auth.js v5 + Credentials provider, JWT sessions; signup/login/logout, session-aware nav; 28 ACs; 124 unit tests (108 web + 16 worker) + 13 E2E (13/13 monorepo-wide) |
 
 ---
 
@@ -133,12 +138,12 @@ None.
 
 ## Notes
 
-- Merge, Split, and Compress (the initial anonymous-usage tool set) are all complete.
-- User Authentication is now the Current Feature (in progress) — see above.
-- Item 4 (Job History) is the natural follow-up once auth lands.
+- Merge, Split, Compress, and User Authentication are all complete.
+- No Current Feature is in progress — awaiting explicit approval before starting the next one (per the One-Feature-at-a-Time Rule).
+- Item 4 (Job History) is now unblocked — auth has landed — and is the natural next candidate.
 - Items 5–6 require LibreOffice headless — architectural complexity increases there.
 - Items 7+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 025 (User Authentication: Frontend — /signup, /login, session-aware nav)*
+*Last updated: 2026-07-01 — Session 026 (User Authentication: E2E Tests, Polish & Definition of Done — feature COMPLETE)*
