@@ -7,9 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.6.0] — In Progress
+## [0.6.0] — 2026-07-01
 
 ### Added (PDF to Image)
+
+**Session 034 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/pdf-to-image.spec.ts` — 2 new Playwright E2E specs: the full upload → format-selection (JPEG) → process → download flow with ZIP contents verified by exact filenames (`page-1.jpg`…`page-3.jpg`) and JPEG magic bytes (AC-22), and the logged-in Job History integration flow — submit while logged in, appears in `/history`, Download control succeeds, ZIP contents verified (`page-1.png`…`page-3.png`) (AC-23)
+- Fixed a gap found while writing the history E2E spec: `apps/web/app/history/page.tsx`'s `JOB_TYPE_LABELS` map had no `PDF_TO_IMAGE` entry, so `/history` displayed the raw enum string instead of a friendly label like the other three job types. Surfaced to the user before fixing (Ask-Before-Assuming); added `PDF_TO_IMAGE: 'PDF to Image'` plus a regression test in `page.test.tsx`
+- Ran the full Definition of Done checklist against the real local stack (native Postgres/Redis/MinIO, `next dev` + worker): `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (208/208 — 187 web + 21 worker), `npx playwright test --workers=1` (18/18 — 2 new pdf-to-image specs + 16 pre-existing, no regressions)
+- All 23 acceptance criteria now verified — PDF to Image is feature-complete
+- `TASKS.md`, `wiki/active-feature.md`, `wiki/completed-features.md` updated to mark the feature Done; Current Feature reset to none pending explicit approval for the next feature (per the One-Feature-at-a-Time Rule)
 
 **Session 033 — Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix (2026-07-01)**
 - `apps/web/app/pdf-to-image/page.tsx` + `validation.ts` (+ `validation.test.ts`) — new tool page mirroring `/compress`'s structure exactly: dropzone upload, PNG/JPEG format selector (radio group), IDLE → UPLOADING → PROCESSING → DONE/ERROR flow with 2s status polling, ZIP download on completion

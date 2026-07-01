@@ -7,9 +7,16 @@
 
 ## Current Feature
 
+**Status:** None — awaiting approval for the next feature (per the One-Feature-at-a-Time Rule)
+
+---
+
+## Previous Feature (Approved)
+
 **Feature:** PDF to Image
-**Status:** IN PROGRESS
+**Status:** COMPLETE ✅
 **Branch:** `feature/pdf-to-image`
+**Completed:** 2026-07-01
 **Spec:** `wiki/active-feature.md`
 
 ### Description
@@ -21,10 +28,13 @@ Allow a user to upload a single PDF, choose PNG or JPEG output, and download a Z
 | 031 | Planning, ADR-009 & Acceptance Criteria | COMPLETE ✅ |
 | 032 | Schema + Worker Processor + API Routes | COMPLETE ✅ |
 | 033 | Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix | COMPLETE ✅ |
-| 034 | E2E Tests, Polish & Definition of Done | Not started |
+| 034 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ### Acceptance Criteria
-23 criteria defined — see `wiki/active-feature.md`. AC-01 through AC-21 verified (upload, processing, ownership, history integration, frontend, quality gates). AC-22–23 (Playwright E2E specs) remain for Session 034.
+All 23 criteria verified — see `wiki/active-feature.md`.
+
+### Notes
+- Session 034 also fixed a small gap found during E2E test-writing: `apps/web/app/history/page.tsx`'s `JOB_TYPE_LABELS` map had no `PDF_TO_IMAGE` entry, so `/history` fell back to displaying the raw enum string (`PDF_TO_IMAGE`) instead of a friendly label like the other three job types. Surfaced to the user before fixing; user chose to add the label for visual consistency.
 
 ### Blocked Items
 None.
@@ -163,6 +173,7 @@ None.
 | 3 | PDF Compress | 2026-07-01 | pdf-lib + Sharp image recompression, 3 levels; 40 ACs; 104 unit tests + 11 E2E |
 | 4 | User Authentication | 2026-07-01 | Auth.js v5 + Credentials provider, JWT sessions; signup/login/logout, session-aware nav; 28 ACs; 124 unit tests (108 web + 16 worker) + 13 E2E (13/13 monorepo-wide) |
 | 5 | Job History | 2026-07-01 | Automatic job-user association, per-owner authorization on status/download, `/history` page; 24 ACs; 168 unit tests (152 web + 16 worker) + 16 E2E (16/16 monorepo-wide) |
+| 6 | PDF to Image | 2026-07-01 | `pdfjs-dist` + `@napi-rs/canvas` rasterization at fixed 150 DPI, PNG/JPEG output, always-ZIP; fourth Job History job type; 23 ACs; 208 unit tests (187 web + 21 worker) + 18 E2E (18/18 monorepo-wide) |
 
 ---
 
@@ -187,11 +198,11 @@ None.
 
 ## Notes
 
-- Merge, Split, Compress, User Authentication, and Job History are all complete.
-- PDF to Image is the Current Feature, in progress (Sessions 031–033 complete; Session 034 remains, per `wiki/active-feature.md`).
+- Merge, Split, Compress, User Authentication, Job History, and PDF to Image are all complete.
+- No Current Feature is selected — awaiting explicit approval for the next feature (per the One-Feature-at-a-Time Rule). `Image to PDF` is Future Backlog priority #1.
 - Items 3–4 require LibreOffice headless — architectural complexity increases there.
 - Items 5+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 033 (PDF to Image: Frontend + `download-button.tsx` route-slug fix)*
+*Last updated: 2026-07-01 — Session 034 (PDF to Image: E2E tests, Polish, Definition of Done — feature COMPLETE)*

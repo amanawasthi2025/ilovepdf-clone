@@ -5,12 +5,13 @@
 
 ---
 
-## Current Feature: PDF to Image
+## Completed Feature: PDF to Image
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE ✅
 **Started:** 2026-07-01
+**Completed:** 2026-07-01
 **Branch:** `feature/pdf-to-image`
-**Sessions:** 031 (planning), 032 (schema + worker + API routes), 033 (frontend + route-slug fix) ← you are here
+**Sessions:** 031 (planning) → 032 (schema + worker + API routes) → 033 (frontend + route-slug fix) → 034 (E2E tests, polish, DoD)
 
 ---
 
@@ -173,8 +174,8 @@ The existing Server Component (`apps/web/app/history/page.tsx`) queries `prisma.
 - [x] AC-19: `npm run typecheck` exits with 0 errors
 - [x] AC-20: `npm run lint` exits with 0 errors/warnings
 - [x] AC-21: `npm run test` passes all unit and integration tests
-- [ ] AC-22: Playwright E2E test passes: upload a PDF, select a format, download the resulting ZIP, and verify it contains the expected number of correctly-formatted page images
-- [ ] AC-23: Playwright E2E test passes: a `PDF_TO_IMAGE` job submitted while logged in appears in `/history` and its Download control succeeds (validates the route-slug fix end-to-end)
+- [x] AC-22: Playwright E2E test passes: upload a PDF, select a format, download the resulting ZIP, and verify it contains the expected number of correctly-formatted page images
+- [x] AC-23: Playwright E2E test passes: a `PDF_TO_IMAGE` job submitted while logged in appears in `/history` and its Download control succeeds (validates the route-slug fix end-to-end)
 
 ---
 
@@ -198,7 +199,7 @@ No open questions remain that block implementation.
 | 031 | Planning, ADR-009 & Acceptance Criteria | COMPLETE ✅ |
 | 032 | Schema (`JobType.PDF_TO_IMAGE`, `ImageFormat`) + Worker Processor + API Routes | COMPLETE ✅ |
 | 033 | Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix | COMPLETE ✅ |
-| 034 | E2E Tests, Polish & Definition of Done | Not started |
+| 034 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ---
 
