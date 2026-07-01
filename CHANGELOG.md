@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.7.0] — In Progress
+
+### Added (Image to PDF)
+
+**Session 035 — Planning, ADR-010 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — full Image to PDF spec: `pdf-lib`-based embedding (no new dependencies), PNG/JPEG input only, page size matches source image pixel dimensions (full-bleed, no scaling), 1–10 images per job, upload-order pages, single direct-download PDF output (not a ZIP), participation in Job History (ADR-008) as a fifth job type. 24 acceptance criteria.
+- `docs/adr/010-image-to-pdf-embedding.md` — documents the embedding-library decision (`pdf-lib`, already installed and verified against its typings, chosen over a Sharp-based indirection) and the page-sizing decision (image-dimensioned pages chosen over fixed-A4-with-scaling).
+- Identified two existing lookup tables that need a new entry once implementation starts (Session 037), not new bugs — `apps/web/app/history/download-button.tsx`'s `JOB_TYPE_ROUTE_SLUGS` and `apps/web/app/history/page.tsx`'s `JOB_TYPE_LABELS`, both generalized in Sessions 033/034 specifically to cover new multi-word job types like `IMAGE_TO_PDF`.
+- `feature/image-to-pdf` branch created off `develop`.
+
+---
+
 ## [0.6.0] — 2026-07-01
 
 ### Added (PDF to Image)
