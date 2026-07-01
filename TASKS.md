@@ -8,24 +8,24 @@
 ## Current Feature
 
 **Feature:** User Authentication
-**Status:** PLANNING
+**Status:** IN PROGRESS
 **Branch:** `feature/user-auth`
 **Started:** 2026-07-01
 **Spec:** `wiki/active-feature.md`
 
 ### Description
-Allow a user to sign up with email/password, log in, and log out through a browser interface, with server-side sessions persisted in PostgreSQL via Auth.js v5 + `@auth/prisma-adapter` (ADR-007). Purely additive: Merge/Split/Compress remain fully anonymous and unchanged. No OAuth, no email verification, no password reset, and no new UI beyond the auth forms and a session-aware nav — all explicitly deferred per user-confirmed scope.
+Allow a user to sign up with email/password, log in, and log out through a browser interface, with sessions via a signed JWT cookie through Auth.js v5 + Credentials provider (ADR-007, corrected by its Session 024 Addendum from the originally-planned database sessions — Auth.js does not support database sessions for a Credentials-only setup). Purely additive: Merge/Split/Compress remain fully anonymous and unchanged. No OAuth, no email verification, no password reset, and no new UI beyond the auth forms and a session-aware nav — all explicitly deferred per user-confirmed scope.
 
 ### Session Breakdown
 | Session | Title | Status |
 |---|---|---|
 | 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
-| 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | Not started |
+| 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | COMPLETE ✅ |
 | 025 | Frontend: `/signup`, `/login`, session-aware nav | Not started |
 | 026 | E2E Tests, Polish & Definition of Done | Not started |
 
 ### Acceptance Criteria
-28 criteria defined — see `wiki/active-feature.md`. None verified yet; Session 023 was planning only.
+28 criteria defined — see `wiki/active-feature.md`. AC-03–AC-07, AC-09–AC-14, AC-23 verified this session (13 of 28) — AC-13/AC-17/AC-19 wording corrected for JWT sessions, see ADR-007 Addendum. Remaining criteria are frontend/E2E, covered by Sessions 025–026.
 
 ### Blocked Items
 None.
@@ -141,4 +141,4 @@ None.
 
 ---
 
-*Last updated: 2026-07-01 — Session 023 (User Authentication: Planning, ADR-007 & Acceptance Criteria)*
+*Last updated: 2026-07-01 — Session 024 (User Authentication: Schema + Signup/Login API, ADR-007 corrected to JWT sessions)*

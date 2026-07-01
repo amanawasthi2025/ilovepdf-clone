@@ -1,6 +1,6 @@
 # ADR-007: User Authentication — Auth.js Credentials Provider + Database Sessions
 
-**Status:** Accepted
+**Status:** Accepted (amended 2026-07-01, Session 024 — see Addendum)
 **Date:** 2026-07-01
 **Author:** Claude Code Session 023
 
@@ -127,3 +127,19 @@ Passwords are hashed with **`bcryptjs`** (pure JavaScript, no native compilation
 
 - `wiki/architecture.md` — original Auth.js decision (Technology Stack, Authentication section)
 - Related ADRs: ADR-001 (pdf-lib, precedent for preferring pure-JS over native/system dependencies where viable)
+
+---
+
+## Addendum — Session 024 Correction (2026-07-01)
+
+**The database-sessions half of the Decision above could not be implemented as written.** Auth.js's own runtime guard (`@auth/core`'s `assert.ts`, enforced at startup) rejects `session.strategy: 'database'` whenever the Credentials provider is the *only* configured provider:
+
+> "Signing in with credentials only supported if JWT strategy is enabled"
+
+This is a hard library constraint, not a bug in this codebase — Auth.js cannot create a database `Session` row from a Credentials sign-in unless at least one non-Credentials provider is also present (which would require OAuth, explicitly out of scope for this feature). This constraint was not known when Option 1 was written and evaluated in Session 023.
+
+**Correction:** `session.strategy` is set to `'jwt'`, not `'database'`. Everything else in the Decision stands: `@auth/prisma-adapter` is still wired up (so `User`/`Account` creation infrastructure is ready for OAuth later), and the `Session` table remains provisioned in the schema — it is simply unused for now, same treatment already given to `Account`/`VerificationToken` in the original Decision's Neutral/Trade-offs section. `session.maxAge` remains 30 days, now as the JWT's own expiry rather than a DB row's `expires` column.
+
+**Consequence for session revocation:** the Positive consequence "Session revocation is a simple DB delete" no longer holds — a JWT is valid until it expires, with no server-side revocation until email verification/OAuth motivates a real database-sessions setup (at which point a second provider would make Option 1's original database-sessions path available). Not a blocker for this feature: no "log out all devices" or admin-revocation requirement exists in the 28 ACs.
+
+**Docs updated accordingly:** `wiki/active-feature.md`'s Scope Decisions table, Session Duration section, API Contract, and ACs 13/17/19 (session persistence is now described in terms of the JWT cookie, not a `Session` table row).

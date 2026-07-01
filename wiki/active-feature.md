@@ -7,7 +7,7 @@
 
 ## Current Feature: User Authentication
 
-**Status:** PLANNING
+**Status:** IN PROGRESS
 **Started:** 2026-07-01
 **Branch:** `feature/user-auth`
 **Sessions:** 023 (planning) → 024–026 (implementation)
@@ -16,7 +16,7 @@
 
 ## Feature Summary
 
-Allow a user to create an account with an email and password, log in, and log out, through a browser interface. Session state is tracked server-side in PostgreSQL. This feature is purely additive infrastructure: Merge, Split, and Compress remain fully anonymous and unchanged — no tool route requires a session. The only new user-facing surface is the signup/login forms and a session-aware nav (shows the logged-in user's email and a logout control when a session exists; shows "Log in" / "Sign up" links otherwise).
+Allow a user to create an account with an email and password, log in, and log out, through a browser interface. Session state is tracked via a signed JWT cookie (see ADR-007 Addendum — Auth.js forces JWT strategy for Credentials-only setups). This feature is purely additive infrastructure: Merge, Split, and Compress remain fully anonymous and unchanged — no tool route requires a session. The only new user-facing surface is the signup/login forms and a session-aware nav (shows the logged-in user's email and a logout control when a session exists; shows "Log in" / "Sign up" links otherwise).
 
 **Why this feature next:**
 - Backlog priority #1 (`TASKS.md`) — the anonymous no-auth tool set (Merge/Split/Compress) is proven; PROJECT.md's Medium-Term goals name "user accounts" as the next step
@@ -40,7 +40,7 @@ These are known limitations, not gaps — see ADR-007 for the reasoning.
 |---|---|---|
 | Auth library | Auth.js v5 (`next-auth`) + `@auth/prisma-adapter` | Already the planned choice in `wiki/architecture.md`; see ADR-007 |
 | Auth method | Email/password only (Credentials provider) | No external OAuth app registration needed; user-confirmed scope |
-| Session strategy | Database sessions (Prisma adapter), not JWT | Consistent with Postgres-as-source-of-truth pattern used by `Job`; see ADR-007 |
+| Session strategy | JWT (forced by Auth.js — Credentials provider only supports JWT when no other provider is configured) | See ADR-007 Addendum (Session 024); `@auth/prisma-adapter` stays wired up for future OAuth, `Session` table remains provisioned but unused for now |
 | Password hashing | `bcryptjs` (pure JS, no native compilation) | Avoids a second native-binding dependency (worker already has one: `sharp`, ADR-006); see ADR-007 |
 | Email verification | Not implemented | YAGNI — no transactional email provider dependency needed yet; user-confirmed |
 | Password reset | Not implemented | Same reasoning as email verification; deferred, not a blocker |
@@ -71,7 +71,7 @@ Not implemented for this pass, consistent with Merge/Split/Compress. Noted as a 
 
 ### Session Duration
 
-30 days, matching Auth.js's own default `session.maxAge`. No "remember me" toggle in v1 — one session duration for all logins.
+30 days, matching Auth.js's own default `session.maxAge` — now the JWT cookie's own expiry (see ADR-007 Addendum) rather than a `Session` table row's `expires` column. No "remember me" toggle in v1 — one session duration for all logins.
 
 ### CSRF / Cookie Security
 
@@ -93,8 +93,9 @@ model User {
 }
 
 // Auth.js's required adapter shape (Account, Session, VerificationToken)
-// provisioned now per ADR-007 even though only Session is populated in v1 —
-// avoids a schema-rewrite migration if OAuth/email-verification are added later.
+// provisioned now per ADR-007, all three unused in v1 (session strategy is JWT,
+// not database — see ADR-007 Addendum) — avoids a schema-rewrite migration if
+// OAuth/email-verification/database-sessions are added later.
 
 model Account {
   id                String  @id @default(cuid())
@@ -134,7 +135,7 @@ model VerificationToken {
 **Schema changes from Compress:**
 - Four new models: `User`, `Account`, `Session`, `VerificationToken` — the exact shape `@auth/prisma-adapter` requires, with `User.passwordHash` added as a project-specific field (Auth.js does not implement credential storage itself)
 - `Job` is completely untouched — no foreign key to `User` in this pass; anonymous `jobId`-based access for Merge/Split/Compress is unaffected
-- `Account`/`VerificationToken` are provisioned but unused until OAuth/email-verification are added (see ADR-007)
+- `Account`/`VerificationToken`/`Session` are provisioned but unused until OAuth/email-verification/database-sessions are added (see ADR-007 and its Addendum)
 
 ---
 
@@ -167,12 +168,12 @@ No password or hash in the response. Signup does **not** automatically log the u
 
 Standard Auth.js catch-all route handling `signIn`, `signOut`, `session`, and CSRF endpoints. Configured with:
 - `CredentialsProvider` — `authorize()` looks up `User` by lowercased email, compares `bcryptjs.compare(password, user.passwordHash)`, returns the user object (minus `passwordHash`) on match or `null` on failure (Auth.js maps a `null` return to a generic auth failure — no distinction between "no such email" and "wrong password" is surfaced to the client, standard practice against user enumeration)
-- `@auth/prisma-adapter` — session persistence
-- `session.strategy: 'database'`, `session.maxAge: 30 days`
+- `@auth/prisma-adapter` — wired up for future OAuth (unused by the Credentials + JWT path itself); see ADR-007 Addendum
+- `session.strategy: 'jwt'`, `session.maxAge: 30 days` (corrected from `'database'` in Session 024 — see ADR-007 Addendum: Auth.js rejects database sessions when Credentials is the only provider)
 
 ### Session check (server components / route handlers)
 
-Any server component or route handler that needs to know the current session calls Auth.js's `auth()` helper, which reads the session cookie and validates it against the `Session` table. No new API endpoint — this is a library-provided helper, not a route.
+Any server component or route handler that needs to know the current session calls Auth.js's `auth()` helper, which reads and verifies the JWT session cookie. No new API endpoint — this is a library-provided helper, not a route.
 
 ---
 
@@ -220,16 +221,16 @@ Any server component or route handler that needs to know the current session cal
 - [ ] AC-10: Submitting correct credentials for an existing account logs the user in and redirects to `/`
 - [ ] AC-11: Submitting an incorrect password shows a generic "Invalid email or password" error (no indication of which field is wrong)
 - [ ] AC-12: Submitting an email with no matching account shows the same generic error as AC-11 (no user enumeration)
-- [ ] AC-13: A successful login creates a `Session` row in PostgreSQL with a 30-day expiry
+- [ ] AC-13: A successful login sets a signed JWT session cookie with a 30-day expiry (corrected from "creates a `Session` row" in Session 024 — see ADR-007 Addendum)
 - [ ] AC-14: The session cookie is HTTP-only and not readable via `document.cookie` in the browser
 
 ### Session & Nav
 
 - [ ] AC-15: When logged in, the nav shows the user's email and a "Log out" control on every page
 - [ ] AC-16: When logged out, the nav shows "Log in" and "Sign up" links on every page
-- [ ] AC-17: Clicking "Log out" ends the session (deletes the `Session` row), redirects to `/`, and the nav reverts to the logged-out state
+- [ ] AC-17: Clicking "Log out" clears the session cookie (Auth.js `signOut()`), redirects to `/`, and the nav reverts to the logged-out state (corrected from "deletes the `Session` row" in Session 024 — see ADR-007 Addendum)
 - [ ] AC-18: A logged-in session persists across a full page reload (server-rendered nav reflects the session on first paint, no client-side flash of the logged-out state)
-- [ ] AC-19: An expired or deleted session is treated as logged-out without an error page
+- [ ] AC-19: An expired or tampered session cookie is treated as logged-out without an error page (corrected from "expired or deleted session" in Session 024 — see ADR-007 Addendum)
 
 ### Anonymous Tools Unaffected
 
@@ -254,7 +255,7 @@ Any server component or route handler that needs to know the current session cal
 |---|---|---|
 | Auth library | Auth.js v5 + Prisma adapter | Already the planned choice in `wiki/architecture.md`; see ADR-007 |
 | Auth method scope | Email/password only | User-confirmed; avoids external OAuth app setup dependency |
-| Session strategy | Database sessions | Consistent with existing Postgres-as-source-of-truth pattern; see ADR-007 |
+| Session strategy | JWT (corrected from database sessions in Session 024) | Auth.js forces JWT strategy for Credentials-only providers; see ADR-007 Addendum |
 | Email verification | Deferred | YAGNI — no email-sending dependency needed yet |
 | Should Merge/Split/Compress require login | No — stay anonymous | User-confirmed; this feature is additive infrastructure only |
 | New UI beyond auth forms | None (no account page) | User-confirmed; strict YAGNI, Job History will own that surface later |
@@ -269,9 +270,17 @@ No open questions remain that block implementation.
 | Session | Title | Status |
 |---|---|---|
 | 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
-| 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | Not started |
+| 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | COMPLETE ✅ |
 | 025 | Frontend: `/signup`, `/login`, session-aware nav | Not started |
 | 026 | E2E Tests, Polish & Definition of Done | Not started |
+
+---
+
+## Implementation Notes (Session 024)
+
+- Session strategy corrected from database to JWT mid-session — see ADR-007 Addendum. All references to "Session row"/"database sessions" throughout this document have been updated to describe JWT cookie behavior instead.
+- Auth.js's default `session` callback already surfaces `email` on `session.user` with no custom callback needed — confirmed via manual `GET /api/auth/session` verification against a real login.
+- `authorizeCredentials()` is exported separately from the Auth.js config object in `lib/auth.ts` specifically so it has a direct unit test without needing to mock the whole Auth.js request pipeline.
 
 ---
 
