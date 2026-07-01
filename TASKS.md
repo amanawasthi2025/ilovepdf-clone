@@ -7,9 +7,28 @@
 
 ## Current Feature
 
-**None — awaiting explicit approval for the next feature.**
+**Feature:** User Authentication
+**Status:** PLANNING
+**Branch:** `feature/user-auth`
+**Started:** 2026-07-01
+**Spec:** `wiki/active-feature.md`
 
-Per the One-Feature-at-a-Time Rule, PDF Compress is now COMPLETE (see below) and no new feature has been started. See the Future Backlog for candidates.
+### Description
+Allow a user to sign up with email/password, log in, and log out through a browser interface, with server-side sessions persisted in PostgreSQL via Auth.js v5 + `@auth/prisma-adapter` (ADR-007). Purely additive: Merge/Split/Compress remain fully anonymous and unchanged. No OAuth, no email verification, no password reset, and no new UI beyond the auth forms and a session-aware nav — all explicitly deferred per user-confirmed scope.
+
+### Session Breakdown
+| Session | Title | Status |
+|---|---|---|
+| 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
+| 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | Not started |
+| 025 | Frontend: `/signup`, `/login`, session-aware nav | Not started |
+| 026 | E2E Tests, Polish & Definition of Done | Not started |
+
+### Acceptance Criteria
+28 criteria defined — see `wiki/active-feature.md`. None verified yet; Session 023 was planning only.
+
+### Blocked Items
+None.
 
 ---
 
@@ -98,28 +117,28 @@ None.
 
 | Priority | Feature | Notes |
 |---|---|---|
-| 1 | **User Authentication** | Required before job history or rate limiting |
-| 2 | **PDF to Image** | Converts pages to PNG/JPG |
-| 3 | **Image to PDF** | Inverse of above |
-| 4 | **PDF Rotate** | Simple but commonly needed |
-| 5 | **Job History** | Requires auth; allows users to re-download outputs |
-| 6 | **PDF to Word** | Complex conversion; requires LibreOffice |
-| 7 | **Word to PDF** | Inverse of above |
-| 8 | **Subscription / Payments** | Monetization; requires auth |
-| 9 | **PDF Watermark** | Add text/image watermark |
-| 10 | **PDF Unlock** | Remove password protection |
-| 11 | **PDF Protect** | Add password protection |
-| 12 | **Developer API** | Programmatic access; requires auth + subscriptions |
+| 1 | **PDF to Image** | Converts pages to PNG/JPG |
+| 2 | **Image to PDF** | Inverse of above |
+| 3 | **PDF Rotate** | Simple but commonly needed |
+| 4 | **Job History** | Requires auth; allows users to re-download outputs |
+| 5 | **PDF to Word** | Complex conversion; requires LibreOffice |
+| 6 | **Word to PDF** | Inverse of above |
+| 7 | **Subscription / Payments** | Monetization; requires auth |
+| 8 | **PDF Watermark** | Add text/image watermark |
+| 9 | **PDF Unlock** | Remove password protection |
+| 10 | **PDF Protect** | Add password protection |
+| 11 | **Developer API** | Programmatic access; requires auth + subscriptions |
 
 ---
 
 ## Notes
 
 - Merge, Split, and Compress (the initial anonymous-usage tool set) are all complete.
-- Item 1 (auth) is next up now that anonymous usage across three tools has been validated.
-- Items 6–7 require LibreOffice headless — architectural complexity increases there.
-- Items 8+ require payment infrastructure — significant scope jump.
+- User Authentication is now the Current Feature (in progress) — see above.
+- Item 4 (Job History) is the natural follow-up once auth lands.
+- Items 5–6 require LibreOffice headless — architectural complexity increases there.
+- Items 7+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 022 (PDF Compress: E2E, Polish & Definition of Done — feature complete)*
+*Last updated: 2026-07-01 — Session 023 (User Authentication: Planning, ADR-007 & Acceptance Criteria)*

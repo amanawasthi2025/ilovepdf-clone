@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.4.0] — 2026-07-01
+
+### Added (User Authentication — In Progress)
+
+**Session 023 — Planning, ADR-007 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — complete User Authentication spec (scope decisions, password/email requirements, `User`/`Account`/`Session`/`VerificationToken` schema, signup/login API contracts, frontend spec, 28 ACs)
+- `docs/adr/007-user-authentication.md` — Decision: Auth.js v5 + `@auth/prisma-adapter`, Credentials provider, database sessions, `bcryptjs` password hashing (rejected JWT sessions, rejected Clerk — both per user-confirmed scope and consistency with the project's existing Postgres-as-source-of-truth pattern)
+- 4-session implementation breakdown (Sessions 023–026)
+- User-confirmed scope, ahead of any code: Merge/Split/Compress remain fully anonymous (no tool gating); email/password only (no OAuth); no email verification; no password reset; no new UI beyond the auth forms and a session-aware nav (no account/profile page yet)
+
+---
+
 ## [0.3.0] — 2026-07-01
 
 ### Added (PDF Compress)
