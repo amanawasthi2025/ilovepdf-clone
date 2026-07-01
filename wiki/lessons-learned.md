@@ -28,6 +28,18 @@ Add entries after completing a feature, resolving a production issue, or a notab
 **Lesson:** `select` is for transforming/filtering data only. Side effects (including `setState`) that react to new fetch results belong in `useEffect` with the query `data` as a dependency.
 **Applies to:** architecture, async processing
 
+### 2026-07-01 — App Router's client Router Cache can outlive the state it depends on
+**Context:** User Authentication frontend — after `signIn('credentials', { redirect: false })` succeeds client-side, `router.push('/')` was used to return to the home page.
+**What happened:** The nav (a server component reading `auth()`) kept showing the stale logged-out state, even though the new session cookie was already set correctly. Next.js's client Router Cache reuses the previously-rendered root layout across a soft navigation instead of re-invoking server components in it; `router.refresh()` before the push did not fix it either. A hard reload always showed the correct state, isolating the bug to router-cache staleness rather than the cookie/session itself.
+**Lesson:** When a client action changes state that a server component depends on (here: the session cookie feeding `auth()` in the root layout's nav), use a full navigation (`window.location.href`) for the immediately-following redirect rather than `router.push` — the same full-round-trip approach the logout server action already used unaffected.
+**Applies to:** architecture, DX
+
+### 2026-07-01 — Auth.js v5 forces JWT sessions for a Credentials-only provider
+**Context:** User Authentication planning (ADR-007) originally specified database sessions (`session.strategy: 'database'`) to match the project's existing pattern of Postgres as the source of truth.
+**What happened:** Auth.js rejects database sessions when Credentials is the only configured provider — discovered mid-implementation (Session 024), not during planning, requiring a same-session correction (ADR-007 Addendum) that touched the schema doc, API contract, and several acceptance criteria's wording.
+**Lesson:** For future auth-adjacent work, check a library's documented provider/session-strategy compatibility matrix during the planning session, before locking scope decisions into an ADR — not just its headline feature list.
+**Applies to:** architecture, workflow
+
 ### 2026-06-30 — npm workspace `devDependencies` are hoisted; local `.bin/` may be empty
 **Context:** Worker `dev` script updated to use `node --env-file` + explicit tsx path.
 **What happened:** `tsx` is a `devDependency` of `apps/worker` but npm workspaces hoisted it to the root `node_modules`. `apps/worker/node_modules/.bin/tsx` did not exist. The script referencing a local path failed at startup.

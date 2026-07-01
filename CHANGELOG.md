@@ -7,6 +7,43 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.4.0] — 2026-07-01
+
+### Added (User Authentication)
+
+**Session 026 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/auth.spec.ts` — 2 new Playwright E2E specs: full signup → login → nav-shows-logged-in-state → reload-persists-session → logout flow (AC-27), and duplicate-email-signup / wrong-password-login error states (AC-28). Each test creates its own uniquely-suffixed `User` and deletes it in a `finally` block, matching the try/finally seeded-row cleanup convention already used by `compress.spec.ts`
+- Ran the full Definition of Done checklist against the real local stack (native Postgres/Redis/MinIO per ADR-004, `next dev`, worker `npm run dev`): `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (124/124 — 108 web + 16 worker), `npx playwright test` (13/13 — 2 new auth specs + 11 pre-existing Merge/Split/Compress specs, no regressions)
+- All 28 acceptance criteria now verified — User Authentication is feature-complete
+- `TASKS.md`, `wiki/active-feature.md`, `wiki/completed-features.md` updated to mark the feature Done; Current Feature reset to none pending explicit approval for the next feature (per the One-Feature-at-a-Time Rule)
+
+**Session 025 — Frontend: `/signup`, `/login`, session-aware nav (2026-07-01)**
+- `apps/web/app/signup/page.tsx` + `validation.ts`/`.test.ts` — signup form; submit disabled until email (Zod `.email()`, mirrors the API) and password (8–72 chars) are valid; `201` → redirect to `/login?signup=success`; `409` → inline "email already exists" under the email field; other errors → generic banner; entered values survive a network failure
+- `apps/web/app/login/page.tsx` — login form using `next-auth/react`'s client `signIn('credentials', { redirect: false })`; generic "Invalid email or password" banner on failure (no field-specific detail, no user enumeration); shows the signup success message via a `?signup=success` query param
+- `apps/web/components/nav.tsx` (new `components/` directory) — `async` Server Component reading `auth()`, rendered from `app/layout.tsx` on every route; logged in shows email + a "Log out" control wired to a server action calling `signOut`; logged out shows "Log in"/"Sign up" links
+- **Bug found and fixed during manual verification:** `router.push('/')` after a successful client-side login left the nav showing the stale logged-out state (Next.js App Router client Router Cache reuses the previously rendered root layout across a soft navigation). Fixed by using a full navigation (`window.location.href = '/'`) for the post-login redirect instead — see `wiki/active-feature.md` Session 025 notes for the full root-cause writeup
+- 7 new unit tests (`app/signup/validation.test.ts`); manually verified the full signup → login → nav → reload → logout flow plus duplicate-email, wrong-password, and tampered-session-cookie (AC-19) cases via a scripted headless-browser session against a live local Postgres + `next dev`
+- `npm run typecheck`/`lint`/`test` all green (108/108 web + 16/16 worker)
+
+**Session 024 — Schema (User/Account/Session/VerificationToken) + Signup/Login API (2026-07-01)**
+- `prisma/schema.prisma` — added `User`, `Account`, `Session`, `VerificationToken` models per `@auth/prisma-adapter`'s required shape, plus `User.passwordHash`; migration `20260701093242_add_user_authentication`; `Job` untouched
+- **ADR-007 corrected (Addendum):** Auth.js rejects `session.strategy: 'database'` when Credentials is the only provider — discovered before implementation, flagged to the user, switched to `session.strategy: 'jwt'` (standard supported path). `wiki/active-feature.md`'s Scope Decisions, Session Duration, API Contract, and ACs 13/17/19 updated to match; original ADR-007 Decision left intact as the historical record
+- `apps/web/lib/auth.ts` — Auth.js config: `PrismaAdapter`, JWT sessions (30-day `maxAge`), one `Credentials` provider; `authorize()` logic extracted into an exported, independently unit-tested `authorizeCredentials()`
+- `apps/web/app/api/auth/[...nextauth]/route.ts` — standard Auth.js App Router handler wiring
+- `apps/web/app/api/auth/signup/route.ts` — `POST /api/auth/signup`: Zod-validated email/password, lowercased/trimmed email, `bcryptjs`-hashed password, `409 EMAIL_ALREADY_REGISTERED` via Prisma `P2002` catch (no separate existence check, avoids a race)
+- Dependencies added to `apps/web`: `next-auth@5.0.0-beta.31` (pinned exact version), `@auth/prisma-adapter@^2.11.2`, `bcryptjs@^2.4.3`, `@types/bcryptjs` (dev) — `npm audit` confirmed no new vulnerabilities
+- `AUTH_SECRET` added to `apps/web/lib/env.ts`, `.env`, `.env.example`
+- 13 new unit tests (`lib/auth.test.ts`, `app/api/auth/signup/route.test.ts`); manually verified signup/login/session/wrong-password against a live local Postgres + `next dev`
+- `npm run typecheck`/`lint`/`test` all green across `@ilovepdf/shared`, `@ilovepdf/web`, `@ilovepdf/worker`
+
+**Session 023 — Planning, ADR-007 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — complete User Authentication spec (scope decisions, password/email requirements, `User`/`Account`/`Session`/`VerificationToken` schema, signup/login API contracts, frontend spec, 28 ACs)
+- `docs/adr/007-user-authentication.md` — Decision: Auth.js v5 + `@auth/prisma-adapter`, Credentials provider, database sessions, `bcryptjs` password hashing (rejected JWT sessions, rejected Clerk — both per user-confirmed scope and consistency with the project's existing Postgres-as-source-of-truth pattern)
+- 4-session implementation breakdown (Sessions 023–026)
+- User-confirmed scope, ahead of any code: Merge/Split/Compress remain fully anonymous (no tool gating); email/password only (no OAuth); no email verification; no password reset; no new UI beyond the auth forms and a session-aware nav (no account/profile page yet)
+
+---
+
 ## [0.3.0] — 2026-07-01
 
 ### Added (PDF Compress)

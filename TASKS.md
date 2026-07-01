@@ -7,13 +7,36 @@
 
 ## Current Feature
 
-**None — awaiting explicit approval for the next feature.**
-
-Per the One-Feature-at-a-Time Rule, PDF Compress is now COMPLETE (see below) and no new feature has been started. See the Future Backlog for candidates.
+**Status:** None — awaiting approval for the next feature (per the One-Feature-at-a-Time Rule)
 
 ---
 
 ## Previous Feature (Approved)
+
+**Feature:** User Authentication
+**Status:** COMPLETE ✅
+**Branch:** `feature/user-auth`
+**Completed:** 2026-07-01
+**Spec:** `wiki/active-feature.md`
+
+### Description
+Allow a user to sign up with email/password, log in, and log out through a browser interface, with sessions via a signed JWT cookie through Auth.js v5 + Credentials provider (ADR-007, corrected by its Session 024 Addendum from the originally-planned database sessions — Auth.js does not support database sessions for a Credentials-only setup). Purely additive: Merge/Split/Compress remain fully anonymous and unchanged. No OAuth, no email verification, no password reset, and no new UI beyond the auth forms and a session-aware nav — all explicitly deferred per user-confirmed scope.
+
+### Session Breakdown
+| Session | Title | Status |
+|---|---|---|
+| 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
+| 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | COMPLETE ✅ |
+| 025 | Frontend: `/signup`, `/login`, session-aware nav | COMPLETE ✅ |
+| 026 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
+
+### Acceptance Criteria
+All 28 criteria verified — see `wiki/active-feature.md`.
+
+### Blocked Items
+None.
+
+---
 
 **Feature:** PDF Compress
 **Status:** COMPLETE ✅
@@ -88,6 +111,7 @@ None.
 | 1 | PDF Merge | 2026-06-30 | Full pipeline; 36 ACs; 25 unit tests + 1 E2E |
 | 2 | PDF Split | 2026-07-01 | Custom ranges, ZIP output; 38 ACs; 75 unit tests + 4 E2E |
 | 3 | PDF Compress | 2026-07-01 | pdf-lib + Sharp image recompression, 3 levels; 40 ACs; 104 unit tests + 11 E2E |
+| 4 | User Authentication | 2026-07-01 | Auth.js v5 + Credentials provider, JWT sessions; signup/login/logout, session-aware nav; 28 ACs; 124 unit tests (108 web + 16 worker) + 13 E2E (13/13 monorepo-wide) |
 
 ---
 
@@ -98,28 +122,28 @@ None.
 
 | Priority | Feature | Notes |
 |---|---|---|
-| 1 | **User Authentication** | Required before job history or rate limiting |
-| 2 | **PDF to Image** | Converts pages to PNG/JPG |
-| 3 | **Image to PDF** | Inverse of above |
-| 4 | **PDF Rotate** | Simple but commonly needed |
-| 5 | **Job History** | Requires auth; allows users to re-download outputs |
-| 6 | **PDF to Word** | Complex conversion; requires LibreOffice |
-| 7 | **Word to PDF** | Inverse of above |
-| 8 | **Subscription / Payments** | Monetization; requires auth |
-| 9 | **PDF Watermark** | Add text/image watermark |
-| 10 | **PDF Unlock** | Remove password protection |
-| 11 | **PDF Protect** | Add password protection |
-| 12 | **Developer API** | Programmatic access; requires auth + subscriptions |
+| 1 | **PDF to Image** | Converts pages to PNG/JPG |
+| 2 | **Image to PDF** | Inverse of above |
+| 3 | **PDF Rotate** | Simple but commonly needed |
+| 4 | **Job History** | Requires auth; allows users to re-download outputs |
+| 5 | **PDF to Word** | Complex conversion; requires LibreOffice |
+| 6 | **Word to PDF** | Inverse of above |
+| 7 | **Subscription / Payments** | Monetization; requires auth |
+| 8 | **PDF Watermark** | Add text/image watermark |
+| 9 | **PDF Unlock** | Remove password protection |
+| 10 | **PDF Protect** | Add password protection |
+| 11 | **Developer API** | Programmatic access; requires auth + subscriptions |
 
 ---
 
 ## Notes
 
-- Merge, Split, and Compress (the initial anonymous-usage tool set) are all complete.
-- Item 1 (auth) is next up now that anonymous usage across three tools has been validated.
-- Items 6–7 require LibreOffice headless — architectural complexity increases there.
-- Items 8+ require payment infrastructure — significant scope jump.
+- Merge, Split, Compress, and User Authentication are all complete.
+- No Current Feature is in progress — awaiting explicit approval before starting the next one (per the One-Feature-at-a-Time Rule).
+- Item 4 (Job History) is now unblocked — auth has landed — and is the natural next candidate.
+- Items 5–6 require LibreOffice headless — architectural complexity increases there.
+- Items 7+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 022 (PDF Compress: E2E, Polish & Definition of Done — feature complete)*
+*Last updated: 2026-07-01 — Session 026 (User Authentication: E2E Tests, Polish & Definition of Done — feature COMPLETE)*

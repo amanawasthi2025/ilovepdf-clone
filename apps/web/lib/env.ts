@@ -16,6 +16,7 @@ const envSchema = z.object({
   MAX_TOTAL_SIZE_BYTES: z.coerce.number().int().positive().default(209715200),
   FILE_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
   DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+  AUTH_SECRET: z.string().min(1),
 })
 
 export const env = envSchema.parse(process.env)

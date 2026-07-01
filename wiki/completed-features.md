@@ -13,6 +13,7 @@
 | 1 | PDF Merge | 2026-06-30 | v0.1.0 | Full upload → worker → download pipeline; 36 ACs verified; 25 unit tests + 1 Playwright E2E test. |
 | 2 | PDF Split | 2026-07-01 | v0.2.0 | Custom page-range split, ZIP archive output; 38 ACs verified; 75 unit tests + 4 Playwright E2E tests. |
 | 3 | PDF Compress | 2026-07-01 | v0.3.0 | pdf-lib + Sharp image recompression, 3 levels (Low/Recommended/High); 40 ACs verified; 104 unit tests + 11 Playwright E2E tests. |
+| 4 | User Authentication | 2026-07-01 | v0.4.0 | Auth.js v5 + Credentials provider, JWT session cookie; signup/login/logout, session-aware nav; 28 ACs verified; 124 unit tests + 13 Playwright E2E tests. |
 
 ---
 
@@ -145,4 +146,36 @@ Users can upload a single PDF and choose a compression level (Low / Recommended 
 
 ---
 
-*Last updated: 2026-07-01 — Session 022 (PDF Compress Complete)*
+### Feature 4: User Authentication
+**Completed:** 2026-07-01
+**Version:** v0.4.0
+**Branch:** feature/user-auth
+
+#### What Was Built
+Users can create an account with an email and password, log in, and log out through a browser interface. Auth.js v5 (`next-auth`) with a Credentials provider handles the login/session machinery; a custom `POST /api/auth/signup` route handles account creation (Auth.js has no signup flow of its own). Sessions are tracked via a signed, HTTP-only JWT cookie with a 30-day expiry. Purely additive: Merge, Split, and Compress remain fully anonymous — no tool route requires a session. The only new user-facing surface is the signup/login forms and a session-aware nav.
+
+#### Key Decisions
+- Auth.js v5 + `@auth/prisma-adapter`, Credentials provider only — no OAuth, matching the already-planned choice in `wiki/architecture.md` and avoiding external OAuth app registration (ADR-007)
+- Session strategy corrected from the originally-planned database sessions to JWT mid-implementation (ADR-007 Addendum) — Auth.js rejects `session.strategy: 'database'` when Credentials is the only configured provider; `Account`/`Session`/`VerificationToken` tables stay provisioned via the adapter for future OAuth but are unused by the JWT path
+- `bcryptjs` (pure JS) for password hashing over a native-binding alternative — avoids a second native dependency alongside the worker's existing `sharp` (ADR-006)
+- Login failures return one generic "Invalid email or password" message regardless of whether the email exists or the password is wrong — standard anti-enumeration practice, same reasoning applied to signup's `409 EMAIL_ALREADY_REGISTERED` (a narrower, accepted trade-off since mitigating it fully requires a verification-email flow, explicitly out of scope)
+- No account/profile page, no email verification, no password reset, no tool gating — all explicitly deferred per user-confirmed scope; Job History (backlog #4) will own the account-page surface later
+
+#### Tests Added
+- 124 Vitest unit/integration tests across the monorepo (108 web, 16 worker — the 16 worker tests are unchanged from Compress; no worker code was touched by this feature), including 6 for `authorizeCredentials()`, 7 for the signup API's validation/error paths, and 7 for signup's client-side validation
+- 13 Playwright E2E tests total (11 pre-existing Merge/Split/Compress, no regressions), plus 2 new specs in `apps/web/e2e/auth.spec.ts`: the full signup → login → session-persists-on-reload → logout flow (AC-27), and duplicate-email-signup / wrong-password-login error states (AC-28)
+- AC-19 (tampered/expired session cookie treated as logged-out, no error page) and AC-14 (cookie is HTTP-only, unreadable via `document.cookie`) verified directly against a live session rather than assumed from Auth.js's documented behavior
+
+#### Known Limitations
+- No rate limiting on signup/login — acceptable for now since no sensitive data sits behind an account yet (no Job History, no payments); revisit when either lands
+- No "remember me" toggle — one fixed 30-day session duration for all logins
+- `Account`, `Session`, and `VerificationToken` tables are provisioned but entirely unused in v1 (JWT sessions don't touch them) — intentional, to avoid a second schema-rewrite migration if OAuth or database sessions are added later
+
+#### Lessons Learned
+- Auth.js v5 (beta) forces JWT session strategy when Credentials is the only provider — this wasn't caught during planning and required a same-session course correction (ADR-007 Addendum) once implementation started; worth explicitly checking a library's documented provider/strategy compatibility matrix during planning for future auth-adjacent work, not just its headline feature list
+- Next.js App Router's client Router Cache can serve a stale server-component render (here: the nav) across a `router.push` soft navigation even when the underlying cookie/session state has already changed — a full navigation (`window.location.href`) is the reliable fix when a server component's output depends on state a client action just changed
+- `next-auth/react`'s `signIn`/`signOut` don't interact with `SessionContext` — only `useSession` does — so a project with no client components calling `useSession` doesn't need a `<SessionProvider>` wrapped anywhere, confirmed by reading the library source rather than assuming a provider is always required
+
+---
+
+*Last updated: 2026-07-01 — Session 026 (User Authentication Complete)*
