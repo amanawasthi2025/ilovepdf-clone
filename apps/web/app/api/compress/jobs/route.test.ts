@@ -42,6 +42,11 @@ vi.mock('@/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), debug: vi.fn(), warn: vi.fn() },
 }))
 
+vi.mock('@/lib/auth', () => ({
+  auth: vi.fn().mockResolvedValue(null),
+}))
+
+import { auth } from '@/lib/auth'
 import { env } from '@/lib/env'
 import { documentProcessingQueue } from '@/lib/queue'
 import { prisma } from '@/lib/db'
@@ -165,6 +170,29 @@ describe('POST /api/compress/jobs', () => {
     expect(vi.mocked(prisma.job.create)).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ compressionLevel: 'RECOMMENDED' }),
+      }),
+    )
+  })
+
+  it('associates the job with the session user id when a session exists', async () => {
+    vi.mocked(auth).mockResolvedValueOnce({ user: { id: 'user-123' } } as never)
+    const buffer = await makePdfBuffer(3)
+    const file = makeFile('a.pdf', buffer)
+    await POST(buildRequest(file, 'HIGH'))
+    expect(vi.mocked(prisma.job.create)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ userId: 'user-123' }),
+      }),
+    )
+  })
+
+  it('leaves the job unassociated when no session exists', async () => {
+    const buffer = await makePdfBuffer(3)
+    const file = makeFile('a.pdf', buffer)
+    await POST(buildRequest(file, 'HIGH'))
+    expect(vi.mocked(prisma.job.create)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ userId: undefined }),
       }),
     )
   })

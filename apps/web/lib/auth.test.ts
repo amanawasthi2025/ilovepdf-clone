@@ -22,8 +22,11 @@ vi.mock('next-auth/providers/credentials', () => ({
   default: vi.fn((config: unknown) => config),
 }))
 
+import NextAuth, { type NextAuthConfig } from 'next-auth'
 import { prisma } from '@/lib/db'
 import { authorizeCredentials } from './auth'
+
+const nextAuthConfig = vi.mocked(NextAuth).mock.calls[0][0] as NextAuthConfig
 
 describe('authorizeCredentials', () => {
   beforeEach(() => { vi.clearAllMocks() })
@@ -85,5 +88,41 @@ describe('authorizeCredentials', () => {
       password: 'correct-password',
     })
     expect(result).toEqual({ id: 'user-1', email: 'user@example.com' })
+  })
+})
+
+describe('jwt callback', () => {
+  it('copies the authenticated user id onto the token on sign-in', async () => {
+    const token = await nextAuthConfig.callbacks!.jwt!({
+      token: {},
+      user: { id: 'user-1', email: 'user@example.com' },
+    } as never)
+    expect(token).toMatchObject({ id: 'user-1' })
+  })
+
+  it('leaves an existing token unchanged on subsequent requests (no user)', async () => {
+    const token = await nextAuthConfig.callbacks!.jwt!({
+      token: { id: 'user-1' },
+      user: undefined,
+    } as never)
+    expect(token).toMatchObject({ id: 'user-1' })
+  })
+})
+
+describe('session callback', () => {
+  it("copies the token's user id onto session.user.id", async () => {
+    const session = await nextAuthConfig.callbacks!.session!({
+      session: { user: { email: 'user@example.com' }, expires: '2026-01-01T00:00:00.000Z' },
+      token: { id: 'user-1' },
+    } as never)
+    expect(session.user?.id).toBe('user-1')
+  })
+
+  it('leaves session.user.id unset when the token has no id', async () => {
+    const session = await nextAuthConfig.callbacks!.session!({
+      session: { user: { email: 'user@example.com' }, expires: '2026-01-01T00:00:00.000Z' },
+      token: {},
+    } as never)
+    expect(session.user?.id).toBeUndefined()
   })
 })

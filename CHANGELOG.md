@@ -7,6 +7,43 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.5.0] — 2026-07-01
+
+### Added (Job History)
+
+**Session 030 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/history.spec.ts` — 3 new Playwright specs against the real stack: full logged-in flow (submit a Merge job → appears in `/history` as `COMPLETED` → Download control produces a valid PDF, AC-23); a negative case seeding an anonymous job and another user's job directly via Prisma and asserting neither leaks into a third user's history (AC-03/AC-14); and a cross-user authorization case (`/history` redirects to `/login` when logged out; status/download return `403 JOB_ACCESS_DENIED` for a job requested with a different user's session, AC-24)
+- AC-16–AC-18 (Merge/Split/Compress unaffected by login state) confirmed: the AC-23 test drives `/merge` fully logged-in end-to-end, and ad-hoc logged-in runs of `/split` and `/compress` completed identically to their existing anonymous E2E specs — no new permanent per-tool specs added since all three upload/status/download routes share identical guard code already covered by Session 028's unit tests (YAGNI)
+- `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (152 web + 16 worker, all passing), `npx playwright test --workers=1` (16/16 — 3 new history specs + 13 pre-existing Merge/Split/Compress/Auth specs, no regressions)
+- All 24 acceptance criteria verified. Job History is feature-complete — see `wiki/completed-features.md`
+
+**Session 029 — Frontend: `/history` page, nav "History" link (2026-07-01)**
+- `apps/web/app/history/page.tsx` — new Server Component; redirects to `/login` when unauthenticated (via `next/navigation`'s `redirect()`); otherwise queries `prisma.job.findMany` for the current user's jobs (most recent 50, newest first) and renders job type, status, created date, a `FAILED` job's error message, and a `COMPLETED` job's `DownloadButton`
+- `apps/web/app/history/download-button.tsx` — new client component, parameterized by `jobId`/`jobType`, reusing each tool's existing per-type `GET /api/{type}/jobs/:id/download` endpoint and navigating the browser to the returned pre-signed URL; shows an inline error on failure
+- `apps/web/components/nav.tsx` — added a "History" link, shown only when a session exists
+- **Bug found and fixed during manual browser verification:** `apps/web/lib/auth.ts` had no `jwt`/`session` callbacks, so `session.user.id` was never populated at runtime (Auth.js v5 doesn't propagate it by default) — confirmed by hitting `GET /api/auth/session` after a real login and seeing no `id` field. This silently broke Session 028's entire association/ownership mechanism in production (every real job would associate as anonymous) despite all of Session 028's unit tests passing, because those tests mock `auth()` directly rather than exercising the real NextAuth config. Fixed by adding `jwt`/`session` callbacks copying the id through; see `wiki/lessons-learned.md` for the full writeup
+- Added `@testing-library/react` + `@testing-library/jest-dom` as new devDependencies (first React-component-level unit tests in this repo) plus `apps/web/vitest.setup.ts` and an `esbuild.jsx: 'automatic'` config tweak so JSX transforms in tests
+- 14 new unit tests: `download-button.test.tsx` (4), `page.test.tsx` (4), `nav.test.tsx` (2), plus 4 new tests on the `jwt`/`session` callbacks in `lib/auth.test.ts`
+- Manually verified end-to-end against the real local stack (native Postgres/Redis/MinIO, `next dev`, worker): signup → login → submit a Compress job → job appears in `/history` as `COMPLETED` → Download control successfully triggers the file download; unauthenticated `/history` redirects to `/login`
+- `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (152 web + 16 worker, all passing)
+- Covers AC-08–AC-15 of the Job History spec (history page + nav); AC-23/AC-24 (Playwright E2E) remain for Session 030
+
+**Session 028 — Schema (`Job.userId`) + Association + Ownership Enforcement (2026-07-01)**
+- `prisma/schema.prisma` — `Job` gains a nullable `userId String?` + `user User?` relation (`onDelete: Cascade`, matching the existing `Account`/`Session` pattern); `User` gains the reverse `jobs Job[]` field; migration `20260701102708_add_job_user_id` applied
+- `apps/web/app/api/{merge,split,compress}/jobs/route.ts` — each upload route now calls `auth()` before creating the `Job` row and passes `session?.user?.id` into `data.userId`; anonymous submissions leave it `undefined`/`null`, unchanged from before
+- `apps/web/app/api/{merge,split,compress}/jobs/[jobId]/{status,download}/route.ts` (6 files) — each adds one guard immediately after the existing `JOB_NOT_FOUND` check: if `job.userId` is set, the requesting session must match it or the route returns `403 JOB_ACCESS_DENIED`; if `job.userId` is `null`, the check is a no-op and behavior is identical to before this session
+- 24 new unit tests across the 9 touched route test files (association tests for the 3 upload routes; owned-matching/owned-no-session/owned-mismatched-user/anonymous-unaffected tests for the 6 status/download routes) — all pre-existing tests in these files pass unmodified (AC-19 confirmed at the unit level; E2E confirmation is Session 030)
+- `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (138 web + 16 worker, all passing) all green
+- Covers AC-01 through AC-07 of the Job History spec; `/history` page itself (AC-08–AC-15) is Session 029
+
+**Session 027 — Planning, ADR-008 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — complete Job History spec: automatic session-based job association, per-owner authorization enforcement on the six existing status/download routes, `/history` page (Server Component, capped 50-item list, no pagination), 24 ACs
+- `docs/adr/008-job-history.md` — Decision: nullable `Job.userId` + relation, ownership enforced only when set, no retention/TTL change (rejected a separate `JobHistory` join table — no second consumer to justify duplicating `Job` as the source of truth; rejected making `userId` required — would reverse ADR-007's purely-additive auth scope)
+- 4-session implementation breakdown (Sessions 027–030)
+- User-confirmed scope, ahead of any code: no change to file retention (already indefinite in practice, a real TTL worker is a separate future effort); ownership becomes an enforced access boundary on status/download once set; association is fully automatic (no opt-in UI); history page is a simple capped list, no pagination/filtering in v1
+
+---
+
 ## [0.4.0] — 2026-07-01
 
 ### Added (User Authentication)

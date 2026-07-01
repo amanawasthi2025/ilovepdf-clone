@@ -14,6 +14,9 @@ export default async function Nav() {
           }}
           className="flex items-center gap-3"
         >
+          <Link href="/history" className="text-sm font-medium text-gray-700 hover:underline">
+            History
+          </Link>
           <span className="text-sm text-gray-600">{session.user.email}</span>
           <button type="submit" className="text-sm font-medium text-blue-600 hover:underline">
             Log out

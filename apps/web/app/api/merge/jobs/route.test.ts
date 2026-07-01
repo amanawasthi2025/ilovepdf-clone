@@ -41,7 +41,13 @@ vi.mock('@/lib/logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), debug: vi.fn(), warn: vi.fn() },
 }))
 
+vi.mock('@/lib/auth', () => ({
+  auth: vi.fn().mockResolvedValue(null),
+}))
+
+import { auth } from '@/lib/auth'
 import { env } from '@/lib/env'
+import { prisma } from '@/lib/db'
 import { POST } from './route'
 
 function makeFile(
@@ -127,5 +133,26 @@ describe('POST /api/merge/jobs', () => {
     const body = (await res.json()) as { jobId: string }
     expect(res.status).toBe(202)
     expect(body.jobId).toBe('test-job-id')
+  })
+
+  it('associates the job with the session user id when a session exists', async () => {
+    vi.mocked(auth).mockResolvedValueOnce({ user: { id: 'user-123' } } as never)
+    const files = [makeFile('a.pdf'), makeFile('b.pdf')]
+    await POST(buildRequest(files))
+    expect(vi.mocked(prisma.job.create)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ userId: 'user-123' }),
+      }),
+    )
+  })
+
+  it('leaves the job unassociated when no session exists', async () => {
+    const files = [makeFile('a.pdf'), makeFile('b.pdf')]
+    await POST(buildRequest(files))
+    expect(vi.mocked(prisma.job.create)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ userId: undefined }),
+      }),
+    )
   })
 })

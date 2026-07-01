@@ -14,6 +14,7 @@
 | 2 | PDF Split | 2026-07-01 | v0.2.0 | Custom page-range split, ZIP archive output; 38 ACs verified; 75 unit tests + 4 Playwright E2E tests. |
 | 3 | PDF Compress | 2026-07-01 | v0.3.0 | pdf-lib + Sharp image recompression, 3 levels (Low/Recommended/High); 40 ACs verified; 104 unit tests + 11 Playwright E2E tests. |
 | 4 | User Authentication | 2026-07-01 | v0.4.0 | Auth.js v5 + Credentials provider, JWT session cookie; signup/login/logout, session-aware nav; 28 ACs verified; 124 unit tests + 13 Playwright E2E tests. |
+| 5 | Job History | 2026-07-01 | v0.5.0 | Automatic job-user association, per-owner authorization on status/download, `/history` page; reuses full Merge/Split/Compress pipeline; 24 ACs verified; 168 unit tests + 16 Playwright E2E tests. |
 
 ---
 
@@ -178,4 +179,37 @@ Users can create an account with an email and password, log in, and log out thro
 
 ---
 
-*Last updated: 2026-07-01 — Session 026 (User Authentication Complete)*
+### Feature 5: Job History
+**Completed:** 2026-07-01
+**Version:** v0.5.0
+**Branch:** feature/job-history
+
+#### What Was Built
+Logged-in users can see a list of the document-processing jobs (Merge, Split, Compress) they've submitted and re-download completed outputs, through a new `/history` page. Association is fully automatic: any job submitted while a session exists is silently tagged with that user's id at creation time; anonymous submissions are entirely unaffected. Once a job has an owner, its status/download endpoints require the requesting session to match that owner (`403 JOB_ACCESS_DENIED` otherwise); anonymous jobs keep working exactly as before, by `jobId` alone. Reuses the entire existing Merge/Split/Compress pipeline (upload → queue → worker → storage → status/download) with no new job types and no new worker code.
+
+#### Key Decisions
+- Nullable `Job.userId` + relation on the existing `Job` model, ownership enforced only once set — rejected a separate `JobHistory` join table (no second consumer to justify duplicating `Job` as the source of truth) and rejected making `userId` required (would reverse ADR-007's purely-additive auth scope) (ADR-008)
+- No change to file/job retention — outputs already persist indefinitely in practice; a real TTL cleanup worker is a separate, larger effort not requested here (ADR-008)
+- Association is automatic based on session presence at submit time — no new "save to history" opt-in UI on the existing tool pages, avoiding scope creep beyond the backlog item
+- `/history` is a Server Component querying Prisma directly, capped to the 50 most recent jobs, no pagination/filtering/search in v1 — mirrors `components/nav.tsx`'s existing direct-DB-read pattern; no new `/api/jobs` REST endpoint since nothing else consumes this data yet (YAGNI)
+- The `DownloadButton` component reuses each tool's existing per-type `GET /api/{type}/jobs/:id/download` endpoint, parameterized by `jobType`, rather than introducing a new unified download mechanism
+
+#### Tests Added
+- 168 Vitest unit/integration tests across the monorepo (152 web, 16 worker), including 24 new tests across the 9 upload/status/download route test files (association + ownership-guard paths) and 14 new React-component tests (`download-button.test.tsx`, `page.test.tsx`, `nav.test.tsx`) — the first component-level (as opposed to API-route) unit tests in this repo
+- 16 Playwright E2E tests total (13 pre-existing Merge/Split/Compress/Auth, no regressions), plus 3 new specs in `apps/web/e2e/history.spec.ts`: AC-23's full flow (submit while logged in → appears in `/history` as `COMPLETED` → download produces a valid PDF), AC-03/AC-14's negative case (an anonymous job and another user's job never leak into a third user's history), and AC-24's authorization case (`/history` redirects to `/login` when logged out; cross-user status/download requests return `403`)
+- AC-16–AC-18 (Merge/Split/Compress unaffected by login state) confirmed via the AC-23 test's full logged-in `/merge` flow plus ad-hoc logged-in browser runs of `/split` and `/compress`, all completing identically to their pre-existing anonymous E2E specs
+
+#### Known Limitations
+- Same as Merge/Split/Compress: no TTL cleanup worker, no rate limiting, fixed worker concurrency
+- No pagination on `/history` — a simple capped list of 50 only; revisit if users accumulate enough jobs to need it
+- No "save to history" opt-in and no retroactive claiming of jobs created before this feature or while logged out — both explicitly out of scope
+- No deletion of a job from history, and no live polling of in-progress jobs within the list — a page refresh reflects status changes
+
+#### Lessons Learned
+- A bug found during Session 029's manual browser verification (not caught by any unit test): `apps/web/lib/auth.ts` had no `jwt`/`session` callbacks, so `session.user.id` was never populated at runtime, silently breaking this feature's entire association/ownership mechanism in production despite all unit tests passing (they mock `auth()` directly, bypassing the real NextAuth config). CLAUDE.md's requirement to actually exercise UI changes in a browser — not just rely on typecheck/lint/unit tests — is what caught this; see the Session 029 note for the full writeup
+- When a code path is byte-for-byte identical across multiple similar routes (here: the `auth()`/`userId` guard duplicated across 3 upload routes and 6 status/download routes) and already has per-route unit test coverage, a single full E2E proof of the mechanism plus targeted ad-hoc verification of the remaining routes is sufficient evidence — adding a dedicated permanent E2E spec per route would have duplicated coverage without reducing risk (YAGNI applied to test suites, not just product code)
+- Running Playwright's full E2E suite with default multi-worker parallelism produced flaky failures on tests unrelated to this feature's changes, caused by resource contention between concurrent headless browsers and the worker's fixed `WORKER_CONCURRENCY=2` — confirmed non-regression by re-running with `--workers=1`, which passed 16/16 cleanly
+
+---
+
+*Last updated: 2026-07-01 — Session 030 (Job History Complete)*

@@ -22,6 +22,18 @@ Add entries after completing a feature, resolving a production issue, or a notab
 
 ## Lessons
 
+### 2026-07-01 — Playwright's default multi-worker parallelism causes flaky failures under this project's fixed worker concurrency
+**Context:** Job History Session 030 — running the full E2E suite (`npx playwright test`, no `--workers` flag) after adding the three new `history.spec.ts` specs.
+**What happened:** Two tests unrelated to this session's changes (`compress.spec.ts` High level, `split.spec.ts` full flow) failed with a UI-state transition never appearing within its 10s timeout. Playwright ran 4 test files concurrently by default; each spawns its own headless browser and drives a real upload against the shared local stack, but `apps/worker` runs with a fixed `WORKER_CONCURRENCY=2` (per `.env`) — under 4-way concurrent load, some jobs simply took longer to start processing than the UI's fixed assertion timeout allowed. Re-running the identical suite with `--workers=1` passed 16/16 cleanly.
+**Lesson:** `playwright.config.ts`'s `fullyParallel: false` only serializes tests *within* a file — different spec files still run in parallel workers by default. Against real (non-mocked) local infrastructure with a fixed consumer concurrency, that parallelism can produce failures that look like regressions but are pure resource contention. Before treating an E2E failure as a real regression, re-run with `--workers=1` to rule this out; if the project's E2E suite keeps growing, consider setting `workers: 1` in `playwright.config.ts` itself rather than relying on every session to remember the flag.
+**Applies to:** testing, DX
+
+### 2026-07-01 — Mocked `auth()` in unit tests hid that `session.user.id` was never populated at runtime
+**Context:** Job History Session 029 — building `/history`, which redirects unauthenticated visitors via `session?.user?.id`. Manual browser verification (per the UI-testing requirement) had a real signed-in user immediately bounced back to `/login`.
+**What happened:** `lib/auth.ts` (from the User Authentication feature, Session 024) never defined `jwt`/`session` callbacks. Auth.js v5's defaults do **not** propagate `user.id` from the `authorize()` return value onto the JWT or the session — `GET /api/auth/session` returned `{"user":{"email":"..."}}` with no `id`, confirmed by hitting the endpoint directly after a real signup+login. Every route touched by Job History Session 028 (`userId: session?.user?.id` on upload, ownership checks on status/download) depends on this field, but its unit tests mock `auth()` to return `{ user: { id } }` directly, so they never exercised the real NextAuth config and all passed anyway. In production, every job would have silently associated as anonymous (`userId: null`) regardless of login state, and this session's own `/history` page would have been permanently unreachable.
+**Lesson:** When a unit test mocks the boundary that a bug lives in (here, `auth()` itself), passing tests prove nothing about that boundary. Session 024's Definition of Done ran E2E tests for signup/login/logout/nav-state but not for a downstream consumer reading `session.user.id` — the gap only surfaced once something *else* (Job History) exercised that field for real. Any new field a session callback is expected to carry needs at least one test that goes through the real `NextAuth()` config (captured via the mocked `next-auth` module's constructor args, as added in `lib/auth.test.ts`), not just a hand-built stub of its shape.
+**Applies to:** testing, security
+
 ### 2026-06-30 — Never call `setState` inside TanStack Query's `select`
 **Context:** PDF Merge frontend — `useQuery` polling job status; `select` was used to drive DONE/ERROR phase transitions.
 **What happened:** `select` is a pure transform called on *every render* to shape cached data, not only when new data arrives from the network. Calling `setPhase()` inside it triggered a re-render → `select` ran again → `setPhase()` again → infinite loop crash (`Too many re-renders`).
@@ -115,4 +127,4 @@ The following categories commonly produce learnable moments in document-processi
 
 ---
 
-*Last updated: 2026-07-01 — Session 022 (PDF Compress Complete)*
+*Last updated: 2026-07-01 — Session 029 (Job History: `/history` page, nav link, auth session.user.id fix)*
