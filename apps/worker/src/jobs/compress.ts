@@ -259,6 +259,33 @@ interface ImageXObject {
 const SUPPORTED_FILTERS = new Set(['/DCTDecode', '/FlateDecode'])
 const SUPPORTED_COLOR_SPACES = new Set(['/DeviceRGB', '/DeviceGray'])
 
+// Real-world scanners/cameras/Adobe tools virtually always attach a color
+// profile to an RGB/Gray image, so `ColorSpace` is an indirect `[/ICCBased
+// <stream ref>]` array rather than the plain `/DeviceRGB`/`/DeviceGray` name
+// pdf-lib itself writes (see JpegEmbedder). Resolving it to its underlying
+// device color space via the ICC stream's `/N` (component count) keeps such
+// images in scope — recompression already re-encodes to plain DeviceRGB/
+// DeviceGray output, so the embedded profile would be discarded either way.
+function resolveColorSpaceName(pdfDoc: PDFDocument, colorSpaceObj: unknown): string | undefined {
+  if (colorSpaceObj instanceof PDFName) return colorSpaceObj.toString()
+
+  if (colorSpaceObj instanceof PDFArray && colorSpaceObj.size() >= 2) {
+    const family = pdfDoc.context.lookup(colorSpaceObj.get(0))
+    if (family instanceof PDFName && family.toString() === '/ICCBased') {
+      const iccStream = pdfDoc.context.lookup(colorSpaceObj.get(1))
+      if (iccStream instanceof PDFRawStream) {
+        const n = iccStream.dict.lookup(PDFName.of('N'))
+        if (n instanceof PDFNumber) {
+          if (n.asNumber() === 1) return '/DeviceGray'
+          if (n.asNumber() === 3) return '/DeviceRGB'
+        }
+      }
+    }
+  }
+
+  return undefined
+}
+
 // Returns every image XObject in the document, in or out of v1 scope (see
 // wiki/active-feature.md Scope Decisions) — callers use `inScope` to decide
 // whether to recompress or leave the image untouched.
@@ -273,7 +300,7 @@ function findImageXObjects(pdfDoc: PDFDocument): ImageXObject[] {
     if (!subtype || subtype.toString() !== '/Image') continue
 
     const filter = dict.lookup(PDFName.of('Filter'))?.toString()
-    const colorSpace = dict.lookup(PDFName.of('ColorSpace'))?.toString()
+    const colorSpace = resolveColorSpaceName(pdfDoc, dict.lookup(PDFName.of('ColorSpace')))
     const pixelWidth = dict.lookup(PDFName.of('Width'))
     const pixelHeight = dict.lookup(PDFName.of('Height'))
 
