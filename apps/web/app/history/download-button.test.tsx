@@ -44,6 +44,18 @@ describe('DownloadButton', () => {
     expect(fetch).toHaveBeenCalledWith('/api/merge/jobs/job-2/download')
   })
 
+  it('maps the multi-word PDF_TO_IMAGE job type to its kebab-case route slug', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ url: 'https://x/y.zip' }) }),
+    )
+
+    render(<DownloadButton jobId="job-3" jobType={JobType.PDF_TO_IMAGE} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Download' }))
+
+    expect(fetch).toHaveBeenCalledWith('/api/pdf-to-image/jobs/job-3/download')
+  })
+
   it('shows an error message and does not navigate when the response is not ok', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
 

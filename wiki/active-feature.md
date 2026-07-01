@@ -5,51 +5,59 @@
 
 ---
 
-## Completed Feature: Job History
+## Completed Feature: PDF to Image
 
 **Status:** COMPLETE ✅
 **Started:** 2026-07-01
 **Completed:** 2026-07-01
-**Branch:** `feature/job-history`
-**Sessions:** 027 (planning) ✅ → 028 (schema/association/ownership) ✅ → 029 (frontend) ✅ → 030 (E2E/DoD) ✅
+**Branch:** `feature/pdf-to-image`
+**Sessions:** 031 (planning) → 032 (schema + worker + API routes) → 033 (frontend + route-slug fix) → 034 (E2E tests, polish, DoD)
 
 ---
 
 ## Feature Summary
 
-Allow a logged-in user to see a list of the document-processing jobs they've submitted (Merge, Split, Compress) and re-download completed outputs, through a new `/history` page. Association is automatic: any job submitted while a session exists gets silently tagged with that user's id at creation time; anonymous submissions are completely unaffected. Once a job belongs to a user, its status/download endpoints require the requesting session to match that owner — anonymous (unowned) jobs keep working exactly as they do today, by `jobId` alone. This feature reuses the entire existing Merge/Split/Compress pipeline (upload → queue → worker → storage → status/download) with no new job types, no new worker code, and no change to file retention.
+Allow a user to upload a single PDF, choose an output image format (PNG or JPEG), and download a ZIP archive containing one image per page, rasterized at a fixed 150 DPI. No authentication required — reuses the full existing pipeline (upload → queue → worker → storage → status/download) established by Merge/Split/Compress, and participates in Job History (ADR-008) exactly like those three tools: automatic `userId` association when logged in, ownership-enforced status/download when a job has an owner, fully unaffected when anonymous.
 
-**Why this feature next:**
-- `PROJECT.md`'s Medium-Term goals name "user accounts and job history" together — accounts (ADR-007) landed in the previous feature specifically to unblock this one
-- `TASKS.md`'s Future Backlog names Job History as the item that becomes unblocked once auth lands, which it now has
+**Why this feature next:** `TASKS.md`'s Future Backlog names PDF to Image as priority #1, the natural next tool feature now that Job History (backlog item unblocked by auth) is complete.
 
 **Explicitly out of scope for this pass (user-confirmed 2026-07-01):**
-- Any change to file/job retention — no TTL cleanup worker is introduced; outputs remain retained exactly as indefinitely as they already are today (a pre-existing, separately-tracked gap — see Known Limitations in `wiki/completed-features.md` for Merge/Split/Compress)
-- Explicit "save to history" opt-in UI — association is fully automatic based on session presence at submit time
-- Pagination, filtering, or search on the history list — a simple capped list (most recent 50) only
-- Retroactively claiming jobs created before this feature shipped, or jobs created while logged out
-- Deleting a job from history (and its underlying file) — not requested; a future account-management feature could own this
-- Live polling of in-progress jobs within the history list — the list reflects the state at page load; a page refresh shows updates (each tool's own page already provides live polling during an active session)
+- Custom page range selection — v1 always converts every page (no reuse of Split's range-parsing UI/validation)
+- User-selectable resolution/DPI or quality tiers (like Compress's Low/Recommended/High) — v1 uses one fixed 150 DPI for all output
+- Any rasterization library other than `pdfjs-dist` + `@napi-rs/canvas` — see ADR-009 (including its Session 032 Addendum) for the alternatives considered and why they were rejected for v1
+- Single-image output for 1-page PDFs — v1 always produces a ZIP, even for a single page, mirroring Split's existing always-ZIP behavior (no single/multi-page branching)
 
-These are known limitations, not gaps — see ADR-008 for the reasoning behind the retention and authorization decisions specifically.
+These are known limitations, not gaps — see ADR-009 for the rasterization library trade-off reasoning specifically.
 
 ---
 
-## Scope Decisions (locked 2026-07-01)
+## Scope Decisions (locked 2026-07-01, rasterization library corrected 2026-07-01 Session 032 — see ADR-009 Addendum)
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Retention/TTL | No change | Outputs already persist indefinitely in practice (no cleanup worker has ever existed); building one is a separate, larger effort not requested here — see ADR-008 |
-| Authorization boundary | Enforced once a job has an owner | If `Job.userId` is set, status/download require the matching session (`403` otherwise); jobs with `userId` null (anonymous) are completely unaffected — see ADR-008 |
-| Association | Automatic, based on session at submit time | No new UI on the existing tool pages; anonymous submission stays anonymous exactly as today |
-| History page scope | Simple capped list (most recent 50) | No pagination/filtering/search in v1 — no evidence yet that users will accumulate enough jobs to need it (YAGNI) |
-| List page implementation | Server Component querying Prisma directly | Mirrors `components/nav.tsx`'s existing pattern (reads `auth()` and DB state directly); no new `/api/jobs` REST endpoint needed since nothing else consumes this data yet |
+| Rasterization library | `pdfjs-dist` + `@napi-rs/canvas` | Sharp's originally-planned prebuilt binaries turned out to have no PDF support at all in this project's actual environment (confirmed empirically in Session 032, not merely assumed) — see ADR-009 Addendum. `@napi-rs/canvas` is a prebuilt-binary N-API canvas, so this remains a pure-npm install with zero new system dependencies. |
+| Output format | User chooses PNG or JPEG at submit time | Mirrors Compress's existing level-selector UX pattern; matches the backlog note ("Converts pages to PNG/JPG") |
+| Page scope | All pages only | Simplest v1; the backlog note doesn't call for range selection (YAGNI) |
+| Resolution | Fixed 150 DPI | Matches the DPI already used for Compress's `RECOMMENDED` tier — a familiar, already-reasoned-about number in this codebase; no new UI control needed |
+| Output packaging | Always a ZIP, one image per page | Mirrors `split.ts`'s existing always-ZIP behavior exactly — avoids a single-image-vs-ZIP branch in both worker and frontend |
 
 ---
 
 ## Database Schema
 
 ```prisma
+enum JobType {
+  MERGE
+  SPLIT
+  COMPRESS
+  PDF_TO_IMAGE
+}
+
+enum ImageFormat {
+  PNG
+  JPEG
+}
+
 model Job {
   id               String            @id @default(cuid())
   jobType          JobType
@@ -58,6 +66,7 @@ model Job {
   outputKey        String?
   splitRanges      String?
   compressionLevel CompressionLevel?
+  imageFormat      ImageFormat?
   errorMessage     String?
   correlationId    String            @unique
   expiresAt        DateTime
@@ -66,125 +75,107 @@ model Job {
   userId           String?
   user             User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
-model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  accounts     Account[]
-  sessions     Session[]
-  jobs         Job[]
-}
 ```
 
-**Schema changes from User Authentication:**
-- `Job` gains a nullable `userId` + `user` relation (`onDelete: Cascade`, matching the existing `Account`/`Session` pattern) — anonymous jobs (the vast majority today) keep `userId` null and are entirely unaffected
-- `User` gains the reverse `jobs Job[]` field
-- No new models, no new enums, no changes to `expiresAt`'s meaning or enforcement (still unenforced, unchanged from every prior feature)
+**Schema changes from Job History:**
+- `JobType` gains `PDF_TO_IMAGE`
+- New `ImageFormat` enum: `PNG` | `JPEG`
+- `Job` gains a nullable `imageFormat ImageFormat?` — mirrors the existing `compressionLevel` pattern (set for this job type only, `null` for every other job type)
+- No changes to `User`, `Account`, `Session`, `VerificationToken`, or any Job History association/authorization mechanism — this feature is a fourth job type plugging into infrastructure that already generalizes over `jobType` (upload routes tag `userId` from session; status/download routes enforce ownership when `userId` is set; `/history` already queries generically by `userId` regardless of `jobType`)
 
 ---
 
 ## API Contract
 
-### `POST /api/{merge,split,compress}/jobs` (existing routes — behavior change)
+### `POST /api/pdf-to-image/jobs` (new route — mirrors `/api/compress/jobs`)
 
-Each of the three upload routes now calls `auth()` before creating the `Job` row and passes the session's user id into `prisma.job.create`'s `userId` field (omitted/`null` when no session exists). No change to request/response shape, status codes, or error codes — this is invisible to the caller.
+- Accepts one PDF file + `format` (`"PNG"` | `"JPEG"`), validated with Zod at the route boundary
+- Calls `auth()` and tags the created `Job` with `session?.user?.id` (same pattern as the other three upload routes since Job History)
+- Creates a `Job` row (`jobType: PDF_TO_IMAGE`, `imageFormat: format`), enqueues in BullMQ
+- Same response shape/status codes as the other three upload routes (`201` with `jobId`, `400` for validation errors, `413` for oversized files)
 
-### `GET /api/{merge,split,compress}/jobs/:jobId/status` and `.../download` (existing routes — behavior change)
+### `GET /api/pdf-to-image/jobs/:jobId/status` and `.../download` (new routes — mirror the other three tool types exactly)
 
-Immediately after the existing `JOB_NOT_FOUND` check, each handler adds one guard:
+- Same `JOB_NOT_FOUND` / ownership-guard (`403 JOB_ACCESS_DENIED`) logic as the six existing status/download routes (ADR-008) — anonymous jobs (`userId` null) unaffected, owned jobs require the matching session
+- `download` returns a pre-signed URL to the output ZIP
 
-- If `job.userId` is `null` — proceed exactly as today, no session check, no behavior change.
-- If `job.userId` is set — call `auth()`; if no session exists, or the session's user id doesn't match `job.userId`, return:
+### `/history` page — no changes required
 
-```json
-{ "error": "JOB_ACCESS_DENIED", "message": "You do not have access to this job." }
-```
-with status `403`.
+The existing Server Component (`apps/web/app/history/page.tsx`) queries `prisma.job.findMany({ where: { userId } })` with no `jobType` filter, so `PDF_TO_IMAGE` jobs appear automatically once created. The only change needed elsewhere is described next.
 
-Owner requests proceed exactly as today (same response shapes as already documented for each tool).
+---
 
-### `/history` page (new — not a REST endpoint)
+## Existing Code Change Required: `history/download-button.tsx` route-slug mapping
 
-A Server Component, not an API route. Calls `auth()` directly; if no session exists, redirects to `/login` via Next.js's `redirect()`. If a session exists, queries:
+`apps/web/app/history/download-button.tsx` currently derives the per-type download URL as `` `/api/${jobType.toLowerCase()}/jobs/${jobId}/download` ``. This has worked so far only because `MERGE`, `SPLIT`, and `COMPRESS` are single words, where `.toLowerCase()` happens to equal the route folder name. `PDF_TO_IMAGE.toLowerCase()` produces `pdf_to_image` (underscore), not the kebab-case `pdf-to-image` route folder Next.js conventions call for here (matching every other route folder in this repo). This is a latent assumption being exposed for the first time by the first multi-word job type, not new instability — fixing it is in scope for this feature (Session 033).
 
-```ts
-prisma.job.findMany({
-  where: { userId: session.user.id },
-  orderBy: { createdAt: 'desc' },
-  take: 50,
-  select: { id: true, jobType: true, status: true, createdAt: true, errorMessage: true },
-})
-```
-
-No new REST endpoint is introduced — nothing else needs this data yet (YAGNI), consistent with `components/nav.tsx`'s existing direct-DB-read pattern.
+**Fix:** a small `JOB_TYPE_ROUTE_SLUGS: Record<JobType, string>` lookup (or equivalent) replacing the naive `.toLowerCase()` call, mapping `PDF_TO_IMAGE` → `'pdf-to-image'` and the existing three job types to their unchanged lowercase slugs.
 
 ---
 
 ## Frontend Specification
 
+### `/pdf-to-image` (new tool page — mirrors `/compress`)
+
+- Upload control for a single PDF (same drag/drop + file picker pattern as Merge/Split/Compress)
+- Format selector: PNG or JPEG (radio group, mirrors Compress's Low/Recommended/High level selector structurally)
+- Same IDLE → UPLOADING → PROCESSING → DONE/ERROR flow, polling, and download UX as every other tool page
+- On download, fetches the pre-signed URL for the output ZIP and navigates the browser to it
+
 ### `/history`
 
-- Server Component; redirects to `/login` if no session (mirrors the existing unauthenticated-access pattern — no new middleware)
-- Reverse-chronological list of the current user's own jobs (job type, status, created date)
-- `COMPLETED` rows render a small client "Download" control that, on click, fetches `GET /api/{type}/jobs/:id/download` (the same per-type endpoint each tool page already calls) and navigates the browser to the returned pre-signed URL — reused across rows, parameterized by `jobType`, not a new download mechanism
-- `FAILED` rows show the job's `errorMessage`
-- `PENDING`/`PROCESSING` rows show their status as plain text — no polling; a page refresh reflects any status change (see Explicitly out of scope)
-- Capped to the 50 most recent jobs, no pagination controls
+- No page changes — `PDF_TO_IMAGE` jobs render using existing generic job-type/status/date columns
+- `download-button.tsx` gets the route-slug fix described above so its Download control works for this job type too
 
-### Nav
+### Nav / Home page
 
-- `components/nav.tsx` gains a "History" link, shown only when a session exists, alongside the existing email + "Log out" control
-- No change to the logged-out state (still "Log in"/"Sign up" only)
-
-### `/merge`, `/split`, `/compress`
-
-- No visible changes. Their upload routes now tag the created job with a `userId` when logged in, but this is invisible to the submitting user — the existing IDLE → UPLOADING → PROCESSING → DONE/ERROR flow, polling, and download behavior are unchanged.
+- No new nav link (Merge/Split/Compress aren't in the nav either — tool pages are reached via the home page's tool list). The home page gains a link/card for `/pdf-to-image` alongside the existing three, matching whatever pattern already lists them there.
+- **Correction (Session 033):** "the existing three" turned out not to exist — `apps/web/app/page.tsx` was still Project Init's placeholder (`Coming soon.`, no links at all); a repo-wide grep confirmed no file ever linked `/merge`, `/split`, or `/compress`. Surfaced to the user before coding; decision was to fix the home page properly rather than add a single inconsistent link — `page.tsx` now renders all four tool cards.
 
 ---
 
 ## Acceptance Criteria
 
-### Association
+### Upload & Processing
 
-- [x] AC-01: A job submitted while logged in has its `Job.userId` set to that user's id
-- [x] AC-02: A job submitted while logged out has `Job.userId` null — unchanged from today
-- [x] AC-03: A user's history never includes jobs created before this feature shipped, or jobs created while logged out (no retroactive claiming) — history query already scopes to `userId`, which is `null` for such jobs; formally confirmed by a Session 030 Playwright E2E test seeding an anonymous job and another user's job and asserting neither appears
+- [x] AC-01: Uploading a valid PDF with `format: "PNG"` creates a `Job` (`jobType: PDF_TO_IMAGE`, `imageFormat: PNG`) and returns a `jobId`
+- [x] AC-02: Uploading a valid PDF with `format: "JPEG"` behaves identically with `imageFormat: JPEG`
+- [x] AC-03: Uploading a non-PDF file is rejected with a `400` validation error, same pattern as Merge/Split/Compress
+- [x] AC-04: Uploading with a missing/invalid `format` value is rejected with a `400` validation error
+- [x] AC-05: The worker rasterizes every page of the input PDF at 150 DPI, one image per page, in the chosen format
+- [x] AC-06: All page images are packaged into a single ZIP output, regardless of page count (including 1-page PDFs)
+- [x] AC-07: A PDF with N pages produces a ZIP with exactly N image files, named `page-1.{ext}` … `page-N.{ext}`
+- [x] AC-08: A malformed/non-PDF-magic-bytes input fails the job with `status: FAILED` and a descriptive `errorMessage`, same pattern as the other three worker processors
 
-### Authorization
+### Status / Download / Ownership
 
-- [x] AC-04: Status/download for an owned job, requested by the owning user's session, succeeds exactly as before
-- [x] AC-05: Status/download for an owned job, requested with no session, returns `403 JOB_ACCESS_DENIED`
-- [x] AC-06: Status/download for an owned job, requested by a different logged-in user's session, returns `403 JOB_ACCESS_DENIED`
-- [x] AC-07: Status/download for an anonymous job (`userId` null) behaves identically regardless of the requester's session state — verified for all three tool types (Merge, Split, Compress), no regression
+- [x] AC-09: Status/download for a job submitted while logged in succeeds for the owning user's session, same as the other three tool types
+- [x] AC-10: Status/download for that job returns `403 JOB_ACCESS_DENIED` for no session or a different user's session
+- [x] AC-11: Status/download for an anonymous (`userId` null) `PDF_TO_IMAGE` job behaves identically regardless of requester session state — no regression to the ADR-008 guard logic
 
-### History Page
+### History Integration
 
-- [x] AC-08: Visiting `/history` while logged in shows the user's own jobs, most recent first
-- [x] AC-09: Each row shows job type, status, and created date
-- [x] AC-10: A `COMPLETED` row's download control successfully downloads the correct output file
-- [x] AC-11: A `FAILED` row shows its error message
-- [x] AC-12: The list is capped to the 50 most recent jobs
-- [x] AC-13: Visiting `/history` while logged out redirects to `/login`
-- [x] AC-14: A user's history never shows another user's jobs or anonymous jobs (enforced by the `where: { userId: session.user.id }` query)
-- [x] AC-15: Nav shows a "History" link only when logged in
+- [x] AC-12: A `PDF_TO_IMAGE` job submitted while logged in appears in `/history` with correct type, status, and created date — no `/history` page code changes required beyond the download-button fix
+- [x] AC-13: The `/history` Download control for a `COMPLETED` `PDF_TO_IMAGE` job successfully downloads the correct output ZIP (validates the route-slug fix)
 
-### Anonymous Tools Unaffected
+### Frontend
 
-- [x] AC-16: `/merge` functions identically whether the visitor is logged in or logged out — verified via the AC-23 E2E test (full logged-in flow) plus the pre-existing anonymous `merge.spec.ts`
-- [x] AC-17: `/split` functions identically whether the visitor is logged in or logged out — verified via a logged-in full-flow browser check plus the pre-existing anonymous `split.spec.ts`
-- [x] AC-18: `/compress` functions identically whether the visitor is logged in or logged out — verified via a logged-in full-flow browser check plus the pre-existing anonymous `compress.spec.ts`
-- [x] AC-19: All pre-existing Merge/Split/Compress unit, integration, and E2E tests continue to pass unmodified — 152 web + 16 worker unit tests and all 16 E2E specs green
+- [x] AC-14: `/pdf-to-image` accepts a PDF upload, a format selection, and completes the full IDLE → UPLOADING → PROCESSING → DONE flow with a working download
+- [x] AC-15: An unsupported/invalid file shows a clear inline error, without a page crash, same pattern as the other tool pages
+- [x] AC-16: The home page links to `/pdf-to-image` alongside the existing three tools
+
+### Anonymous Use Unaffected
+
+- [x] AC-17: `/pdf-to-image` functions identically whether the visitor is logged in or logged out
+- [x] AC-18: All pre-existing Merge/Split/Compress/Auth/Job History unit, integration, and E2E tests continue to pass unmodified
 
 ### Quality
 
-- [x] AC-20: `npm run typecheck` exits with 0 errors
-- [x] AC-21: `npm run lint` exits with 0 errors/warnings
-- [x] AC-22: `npm run test` passes all unit and integration tests
-- [x] AC-23: Playwright E2E test passes: submit a job while logged in → job appears in `/history` with correct type/status → download succeeds
-- [x] AC-24: Playwright E2E test passes: `/history` redirects to `/login` when logged out; a job owned by one user returns `403` when its status/download endpoint is requested using a different user's session
+- [x] AC-19: `npm run typecheck` exits with 0 errors
+- [x] AC-20: `npm run lint` exits with 0 errors/warnings
+- [x] AC-21: `npm run test` passes all unit and integration tests
+- [x] AC-22: Playwright E2E test passes: upload a PDF, select a format, download the resulting ZIP, and verify it contains the expected number of correctly-formatted page images
+- [x] AC-23: Playwright E2E test passes: a `PDF_TO_IMAGE` job submitted while logged in appears in `/history` and its Download control succeeds (validates the route-slug fix end-to-end)
 
 ---
 
@@ -192,10 +183,10 @@ No new REST endpoint is introduced — nothing else needs this data yet (YAGNI),
 
 | Question | Decision | Rationale |
 |---|---|---|
-| Should file/job retention change? | No | Already indefinite in practice; a real TTL worker is a separate, larger effort — see ADR-008 |
-| Should ownership become an enforced access boundary? | Yes, once a job has an owner | Closes a real (if minor) information-disclosure gap for authenticated users without touching anonymous jobs — see ADR-008 |
-| How does a job get associated with a user? | Automatically, based on session at submit time | No new UI on existing tool pages; avoids scope creep beyond the backlog item |
-| Should the history page have pagination/filtering in v1? | No — simple capped list | No evidence yet of need; YAGNI |
+| Which rasterization library? | `pdfjs-dist` + `@napi-rs/canvas` | Corrected in Session 032 after Sharp's PDF support proved unavailable in this environment — zero new system dependencies, verified working (ADR-009 Addendum) |
+| Which output format(s)? | User chooses PNG or JPEG | Matches backlog note; mirrors Compress's selector UX |
+| Custom page ranges in v1? | No — all pages only | Not called for by the backlog note; YAGNI |
+| Fixed or selectable resolution? | Fixed 150 DPI | No demonstrated need for a selector yet; simplest v1 |
 
 No open questions remain that block implementation.
 
@@ -205,19 +196,10 @@ No open questions remain that block implementation.
 
 | Session | Title | Status |
 |---|---|---|
-| 027 | Planning, ADR-008 & Acceptance Criteria | COMPLETE ✅ |
-| 028 | Schema (`Job.userId`) + Association (upload routes) + Ownership Enforcement (status/download routes) | COMPLETE ✅ |
-| 029 | Frontend: `/history` page, nav "History" link | COMPLETE ✅ |
-| 030 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
-
----
-
-## Implementation Notes (Session 030)
-
-- `apps/web/e2e/history.spec.ts` — three new Playwright specs against the real stack (native Postgres/Redis/MinIO per ADR-004, `next dev`, worker's `npm run dev`): AC-23's full flow (signup → login → submit a real Merge job → `/history` shows it as `Merge`/`COMPLETED` → Download control produces a valid PDF), AC-03/AC-14's negative case (an anonymous job and another user's job, both seeded directly via Prisma, never appear in a third user's history — asserted via the empty-state message), and AC-24's authorization case (logged-out `/history` redirects to `/login`; a job seeded for one user returns `403 JOB_ACCESS_DENIED` from both the status and download endpoints when requested via a different, isolated browser context's session).
-- AC-16–AC-18 (anonymous tools unaffected) were confirmed two ways: the AC-23 test exercises `/merge` fully logged-in end-to-end, and two throwaway (uncommitted) Playwright scripts drove `/split` and `/compress` logged-in through their full upload → process → download flows — both completed identically to their existing anonymous E2E specs. Combined with the fact that all three upload routes and all six status/download routes share byte-for-byte identical `auth()`/`userId` guard code (confirmed by direct inspection), and Session 028's unit tests already assert the association/ownership logic per job type, no new permanent per-tool E2E specs were added — would have duplicated coverage the anonymous specs and the shared code path already provide (YAGNI).
-- Ran the full Definition of Done checklist against the real local stack: `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (152 web + 16 worker, all passing), `npx playwright test` (16/16 — 3 new history specs + 13 pre-existing Merge/Split/Compress/Auth specs, no regressions). Running the full E2E suite with Playwright's default multi-worker parallelism produced 2 flaky failures (`compress.spec.ts` High level, `split.spec.ts` full flow) caused by resource contention between concurrent browser instances and the worker's fixed `WORKER_CONCURRENCY=2`, not a real regression — confirmed by a clean 16/16 pass with `--workers=1`.
-- All 24 acceptance criteria are now verified. Job History is feature-complete.
+| 031 | Planning, ADR-009 & Acceptance Criteria | COMPLETE ✅ |
+| 032 | Schema (`JobType.PDF_TO_IMAGE`, `ImageFormat`) + Worker Processor + API Routes | COMPLETE ✅ |
+| 033 | Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix | COMPLETE ✅ |
+| 034 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ---
 

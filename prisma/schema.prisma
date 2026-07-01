@@ -17,6 +17,7 @@ model Job {
   outputKey        String?
   splitRanges      String?
   compressionLevel CompressionLevel?
+  imageFormat      ImageFormat?
   errorMessage     String?
   correlationId    String            @unique
   expiresAt        DateTime
@@ -30,6 +31,12 @@ enum JobType {
   MERGE
   SPLIT
   COMPRESS
+  PDF_TO_IMAGE
+}
+
+enum ImageFormat {
+  PNG
+  JPEG
 }
 
 enum JobStatus {

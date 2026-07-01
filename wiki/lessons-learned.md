@@ -22,6 +22,18 @@ Add entries after completing a feature, resolving a production issue, or a notab
 
 ## Lessons
 
+### 2026-07-01 — A per-job-type lookup map is easy to update in one place and forget in another
+**Context:** PDF to Image Session 034 — writing the E2E spec for the `/history` integration flow (AC-23), which asserts the row's displayed job-type label.
+**What happened:** Session 031's planning correctly identified and Session 033 correctly fixed `download-button.tsx`'s `jobType.toLowerCase()` route-slug bug for the new `PDF_TO_IMAGE` job type. But `history/page.tsx` has a second, structurally identical `Record<JobType, ...>`-shaped lookup (`JOB_TYPE_LABELS`, for display text) that nobody updated — it silently fell back to rendering the raw enum string `PDF_TO_IMAGE` instead of a friendly label. `wiki/active-feature.md` had explicitly scoped `/history` as "no page changes required," which was true for the *query* but not for every hardcoded per-type lookup in that file.
+**Lesson:** When a new enum variant is added to a type that other code branches on, grep for every `Record<ThatType, ...>`-shaped lookup in the codebase (not just the one bug already known about) before assuming "no changes needed" for a file that touches that type.
+**Applies to:** DX, workflow
+
+### 2026-07-01 — Don't assert on a UI's transient state without confirming it reliably persists
+**Context:** PDF to Image Session 034 — the new `pdf-to-image.spec.ts` E2E spec initially mirrored Compress/Split's pattern of asserting the `PROCESSING` phase text is visible before waiting for `DONE`.
+**What happened:** Rasterizing 3 blank 300×300 fixture pages is fast enough that the worker can finish and the UI can reach `DONE` before Playwright's `toBeVisible()` poll (100ms interval) ever observes the `PROCESSING` text — the assertion failed with the DOM snapshot showing the already-completed `DONE` state, not a real regression. Compress/Split's fixtures involve heavier real processing (image recompression, larger page counts), so their equivalent assertions reliably catch the transient state.
+**Lesson:** A transient/intermediate UI state is only safe to assert on in an E2E test if the underlying work is slow enough to guarantee it's observable; for fast operations, assert only on states that are guaranteed to persist (here, skip straight to the `DONE` assertion).
+**Applies to:** testing
+
 ### 2026-07-01 — Playwright's default multi-worker parallelism causes flaky failures under this project's fixed worker concurrency
 **Context:** Job History Session 030 — running the full E2E suite (`npx playwright test`, no `--workers` flag) after adding the three new `history.spec.ts` specs.
 **What happened:** Two tests unrelated to this session's changes (`compress.spec.ts` High level, `split.spec.ts` full flow) failed with a UI-state transition never appearing within its 10s timeout. Playwright ran 4 test files concurrently by default; each spawns its own headless browser and drives a real upload against the shared local stack, but `apps/worker` runs with a fixed `WORKER_CONCURRENCY=2` (per `.env`) — under 4-way concurrent load, some jobs simply took longer to start processing than the UI's fixed assertion timeout allowed. Re-running the identical suite with `--workers=1` passed 16/16 cleanly.
@@ -94,6 +106,12 @@ Add entries after completing a feature, resolving a production issue, or a notab
 **Lesson:** A "read-only" library operation (here: figuring out an image's on-page size) can require reimplementing a sliver of the format's execution model when the library only exposes structure, not semantics. Before writing that code, check whether the scope can be narrowed (this implementation explicitly did not walk into nested Form XObjects, falling back to quality-only recompression there) rather than building a general-purpose interpreter for a v1.
 **Applies to:** architecture, performance
 
+### 2026-07-01 — An ADR's factual claim about a dependency's capability was never actually verified, and it was wrong
+**Context:** PDF to Image Session 031 (planning) → Session 032 (implementation). ADR-009 chose Sharp for PDF rasterization on the stated grounds that "PDFium ships in Sharp's official prebuilt binaries."
+**What happened:** That claim was false for this project's actual installed dependency. `sharp@0.33.5`'s `sharp.format.pdf.input.buffer` is `false`, and calling `sharp(pdfBuffer, ...)` throws `Input buffer contains unsupported image format` — confirmed only when Session 032 actually ran Sharp against a generated PDF fixture, the first time anyone had done so. Sharp's real PDF support requires a globally-installed libvips compiled with PDFium/poppler, which is never part of the npm-published prebuilt binaries — exactly the system-dependency cost ADR-009 had rejected `poppler-utils` for. The ADR's Context section stated this had been "confirmed against Sharp's own installation documentation before making this decision, not assumed" — but it hadn't actually been run against real input.
+**Lesson:** A claim like "library X supports capability Y out of the box" is a testable hypothesis, not a fact to accept from documentation or general familiarity — run the actual installed dependency against real input before an ADR locks in a decision built on that claim, especially for a capability (rendering/rasterization) qualitatively different from what's already been used successfully (structural PDF manipulation, image re-encoding). When the premise turns out wrong mid-implementation, stop and put the corrected trade-off to the user rather than silently swapping libraries — this surfaced three real options (accept the system dependency, switch libraries, or pause to re-plan) that only the user could weigh. The switch to `pdfjs-dist` + `@napi-rs/canvas` (Option 2, previously rejected) was itself verified working against a real fixture — including its `standardFontDataUrl` requirement, whose omission silently produces blank pages — before any processor code was written against it.
+**Applies to:** architecture, testing
+
 ---
 
 ## Categories to Watch
@@ -127,4 +145,4 @@ The following categories commonly produce learnable moments in document-processi
 
 ---
 
-*Last updated: 2026-07-01 — Session 029 (Job History: `/history` page, nav link, auth session.user.id fix)*
+*Last updated: 2026-07-01 — Session 034 (PDF to Image: E2E tests, polish, Definition of Done — feature complete)*

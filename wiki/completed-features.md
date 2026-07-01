@@ -212,4 +212,36 @@ Logged-in users can see a list of the document-processing jobs (Merge, Split, Co
 
 ---
 
-*Last updated: 2026-07-01 — Session 030 (Job History Complete)*
+### Feature 6: PDF to Image
+**Completed:** 2026-07-01
+**Version:** v0.6.0
+**Branch:** feature/pdf-to-image
+
+#### What Was Built
+Users can upload a single PDF, choose PNG or JPEG output, and download a ZIP archive containing one rasterized image per page (fixed 150 DPI, all pages, no ranges) via a new `/pdf-to-image` page. Reuses the full existing pipeline (upload → queue → worker → storage → status/download) established by Merge/Split/Compress, and participates in Job History (ADR-008) as a fourth job type: automatic `userId` association when logged in, ownership-enforced status/download when a job has an owner, fully unaffected when anonymous. `/history` required no page-level query changes — only a route-slug fix (below) and a display-label addition to correctly surface this new job type.
+
+#### Key Decisions
+- Rasterization via `pdfjs-dist` + `@napi-rs/canvas`, not the originally-planned Sharp + bundled PDFium — Sharp's actual installed build in this environment has zero PDF support (`sharp.format.pdf.input.buffer === false`), confirmed empirically in Session 032 before writing worker code against it, contradicting ADR-009's original assumption; corrected via ADR-009 Addendum to the alternative already documented as a fallback, keeping the zero-new-system-dependency constraint via `@napi-rs/canvas`'s prebuilt N-API binary (ADR-009)
+- Fixed 150 DPI, all pages, always-ZIP output (even for 1-page PDFs) — mirrors Split's existing always-ZIP behavior and Compress's `RECOMMENDED` tier DPI; avoids new UI controls and a single/multi-image branch in both worker and frontend (YAGNI)
+- `apps/web/app/history/download-button.tsx`'s naive `jobType.toLowerCase()` route-slug derivation only worked by coincidence for the three prior single-word job types; replaced with an explicit `JOB_TYPE_ROUTE_SLUGS: Record<JobType, string>` map so multi-word job types (`PDF_TO_IMAGE` → `pdf-to-image`) resolve correctly — identified during planning (Session 031), fixed in Session 033
+- `apps/web/app/page.tsx` was still Project Init's `Coming soon.` placeholder — no prior tool page was ever actually linked from the home page. Surfaced to the user before coding (Ask-Before-Assuming); user chose to fix all four tool links rather than add one more inconsistency
+
+#### Tests Added
+- 208 Vitest unit/integration tests across the monorepo (187 web, 21 worker), including 11 new upload-route tests, 7 new status-route tests, `validation.test.ts` (7 tests), a `download-button.test.tsx` regression case for the route-slug map, and a `page.test.tsx` regression case for the `/history` `PDF_TO_IMAGE` display label
+- `apps/worker/src/jobs/pdf-to-image.test.ts` — 5 tests using real `pdfjs-dist`/`@napi-rs/canvas` against fixture PDFs (only I/O boundaries mocked), including a dedicated non-blank-pixel regression test guarding the `standardFontDataUrl` fix (see Lessons Learned)
+- 18 Playwright E2E tests total (16 pre-existing Merge/Split/Compress/Auth/Job History, no regressions), plus 2 new specs in `apps/web/e2e/pdf-to-image.spec.ts`: the full upload → format-selection → process → download flow with ZIP contents verified by magic bytes and exact filenames (AC-22), and the logged-in Job History integration flow validating the route-slug fix end-to-end (AC-23)
+
+#### Known Limitations
+- Same as Merge/Split/Compress/Job History: no TTL cleanup worker, no rate limiting, fixed worker concurrency
+- No custom page-range selection, no selectable DPI/quality tiers, no single-image output for 1-page PDFs — all explicitly deferred to a future pass if ever requested (see `wiki/active-feature.md`'s Explicitly Out of Scope list)
+
+#### Lessons Learned
+- Sharp's PDF support depends on a globally-installed libvips built with PDFium/poppler — a system-level dependency this project's actual installed `sharp@0.33.5` does not have, despite ADR-009's original assumption that "Sharp already handles PDFs." Always empirically verify a library's capability claim against a real fixture in this environment before designing a worker processor around it, not just its documentation
+- `pdfjs-dist`'s Node font loader needs `standardFontDataUrl` set to a plain filesystem path (not a `file://` URL string) — it's passed straight to `fs.promises.readFile`. Without it, pages using non-embedded standard fonts (Helvetica, Times, etc.) rasterize as silently blank with no error; caught only by a dedicated non-blank-pixel pixel-sampling test, not by a page-count or file-size assertion
+- `pdfjs-dist`'s legacy Node build is ESM-only; a static `import` compiles to `require()` under this package's CJS output and throws `ERR_REQUIRE_ESM` below Node 22.12 — loaded via a cached dynamic `import()` instead
+- A hardcoded per-job-type label lookup (`JOB_TYPE_LABELS` in `history/page.tsx`) is a second place, alongside `download-button.tsx`'s route-slug map, where "the fourth job type" wasn't automatically covered by "no `/history` page changes required" — worth explicitly grepping for every `Record<JobType, ...>`-shaped lookup in the codebase the next time a new job type is added, rather than relying on the spec's genericity claim alone
+- A worker job that finishes fast (rasterizing a handful of blank fixture pages) can complete before an E2E assertion's polling interval catches an intermediate UI state (`PROCESSING`) — unlike Compress/Split's real, slower processing. Don't assert on transient states without first confirming they reliably persist long enough to observe
+
+---
+
+*Last updated: 2026-07-01 — Session 034 (PDF to Image Complete)*

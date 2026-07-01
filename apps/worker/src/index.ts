@@ -1,16 +1,22 @@
 import process from 'node:process'
 import { Worker } from 'bullmq'
 import type { Job } from 'bullmq'
-import type { CompressJobPayload, MergeJobPayload, SplitJobPayload } from '@ilovepdf/shared'
+import type {
+  CompressJobPayload,
+  MergeJobPayload,
+  PdfToImageJobPayload,
+  SplitJobPayload,
+} from '@ilovepdf/shared'
 import { env } from './lib/env.js'
 import { logger } from './lib/logger.js'
 import { processMergeJob } from './jobs/merge.js'
 import { processSplitJob } from './jobs/split.js'
 import { processCompressJob } from './jobs/compress.js'
+import { processPdfToImageJob } from './jobs/pdf-to-image.js'
 
 const redisUrl = new URL(env.REDIS_URL)
 
-const worker = new Worker<MergeJobPayload | SplitJobPayload | CompressJobPayload>(
+const worker = new Worker<MergeJobPayload | SplitJobPayload | CompressJobPayload | PdfToImageJobPayload>(
   'document-processing',
   async (job) => {
     if (job.name === 'merge') {
@@ -21,6 +27,9 @@ const worker = new Worker<MergeJobPayload | SplitJobPayload | CompressJobPayload
     }
     if (job.name === 'compress') {
       return processCompressJob(job as Job<CompressJobPayload>)
+    }
+    if (job.name === 'pdf-to-image') {
+      return processPdfToImageJob(job as Job<PdfToImageJobPayload>)
     }
     logger.warn({ jobName: job.name }, 'unknown job type received — skipping')
   },

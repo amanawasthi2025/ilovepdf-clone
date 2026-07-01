@@ -7,6 +7,44 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.6.0] — 2026-07-01
+
+### Added (PDF to Image)
+
+**Session 034 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/pdf-to-image.spec.ts` — 2 new Playwright E2E specs: the full upload → format-selection (JPEG) → process → download flow with ZIP contents verified by exact filenames (`page-1.jpg`…`page-3.jpg`) and JPEG magic bytes (AC-22), and the logged-in Job History integration flow — submit while logged in, appears in `/history`, Download control succeeds, ZIP contents verified (`page-1.png`…`page-3.png`) (AC-23)
+- Fixed a gap found while writing the history E2E spec: `apps/web/app/history/page.tsx`'s `JOB_TYPE_LABELS` map had no `PDF_TO_IMAGE` entry, so `/history` displayed the raw enum string instead of a friendly label like the other three job types. Surfaced to the user before fixing (Ask-Before-Assuming); added `PDF_TO_IMAGE: 'PDF to Image'` plus a regression test in `page.test.tsx`
+- Ran the full Definition of Done checklist against the real local stack (native Postgres/Redis/MinIO, `next dev` + worker): `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (208/208 — 187 web + 21 worker), `npx playwright test --workers=1` (18/18 — 2 new pdf-to-image specs + 16 pre-existing, no regressions)
+- All 23 acceptance criteria now verified — PDF to Image is feature-complete
+- `TASKS.md`, `wiki/active-feature.md`, `wiki/completed-features.md` updated to mark the feature Done; Current Feature reset to none pending explicit approval for the next feature (per the One-Feature-at-a-Time Rule)
+
+**Session 033 — Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix (2026-07-01)**
+- `apps/web/app/pdf-to-image/page.tsx` + `validation.ts` (+ `validation.test.ts`) — new tool page mirroring `/compress`'s structure exactly: dropzone upload, PNG/JPEG format selector (radio group), IDLE → UPLOADING → PROCESSING → DONE/ERROR flow with 2s status polling, ZIP download on completion
+- `apps/web/app/history/download-button.tsx` — fixed the latent route-slug bug identified in Session 031: replaced the naive `jobType.toLowerCase()` derivation with an explicit `JOB_TYPE_ROUTE_SLUGS: Record<JobType, string>` map (`PDF_TO_IMAGE` → `'pdf-to-image'`), so the Download control resolves the correct kebab-case route for multi-word job types; added a regression test asserting the mapping
+- **Ambiguity surfaced and resolved with the user before coding:** `wiki/active-feature.md`/AC-16 assumed the home page already linked Merge/Split/Compress ("alongside the existing three tools") — it didn't; `apps/web/app/page.tsx` was still the placeholder `Coming soon.` text from Project Init, and a repo-wide grep confirmed no `.tsx`/`.ts` file ever linked `/merge`, `/split`, or `/compress`. User chose to fix the home page properly rather than leave the inconsistency: `apps/web/app/page.tsx` now renders four tool cards (Merge/Split/Compress/PDF to Image) instead of the placeholder, with `page.test.tsx` asserting all four links
+- Manually verified end-to-end against the real local stack (native Postgres/Redis/MinIO, `next dev` + worker, restarted with `.env` properly loaded — the previously-running `next dev` process had been started without it, surfaced by a real `500` on first verification attempt): home page → `/pdf-to-image` card → upload → JPEG conversion → ZIP download (3 pages → `page-1.jpg`…`page-3.jpg`); separately, signup → login → submit a PDF to Image job → appears in `/history` as `PDF_TO_IMAGE`/`COMPLETED` → Download control succeeds (validates the route-slug fix live, AC-12/AC-13)
+- 10 new unit tests (7 `validation.test.ts` + 1 `page.test.tsx` + 1 `download-button.test.tsx` route-slug case; no new test file needed for `pdf-to-image/page.tsx` itself, matching the existing pattern where Merge/Split/Compress page components are covered by E2E rather than component tests)
+- `npm run typecheck` (0 errors), `npm run lint` (0 errors/warnings), `npm run test` (187 web + 21 worker, all passing, no regressions)
+- Covers AC-12–AC-17 of the PDF to Image spec; AC-19–AC-23 (quality gates already green above; Playwright E2E specs) remain for Session 034
+
+**Session 032 — Schema + Worker Processor + API Routes (2026-07-01)**
+- `prisma/schema.prisma` — `JobType` gains `PDF_TO_IMAGE`; new `ImageFormat` enum (`PNG`/`JPEG`); `Job` gains nullable `imageFormat`. Migration `20260701114002_add_pdf_to_image_job_type` applied.
+- `packages/shared` — `ImageFormat` enum, `PdfToImageJobPayload`, `JobType.PDF_TO_IMAGE` added and exported.
+- **ADR-009 corrected (Session 032 Addendum):** the originally-planned Sharp + "bundled PDFium" approach does not work — this project's actual installed `sharp@0.33.5` has zero PDF support (`sharp.format.pdf.input.buffer === false`; no `poppler`/`pdfium` in `sharp.versions`), confirmed by running Sharp against a real PDF before writing any worker code against it. Sharp's PDF support requires a globally-installed libvips built with PDFium/poppler — a system dependency, contradicting ADR-009's own stated rationale. Switched to `pdfjs-dist` + `@napi-rs/canvas` (ADR-009's originally-rejected Option 2, using `@napi-rs/canvas` instead of `node-canvas` to keep zero system dependencies), verified working end-to-end before adopting.
+- `apps/worker/src/jobs/pdf-to-image.ts` — new processor: `pdfjs-dist`'s Node/legacy build rasterizes each page via `@napi-rs/canvas` at fixed 150 DPI, packaged into a ZIP via `JSZip` (mirrors `split.ts`'s always-ZIP pattern). Loads `pdfjs-dist`'s ESM-only legacy build via a cached dynamic `import()` (a static import would compile to `require()` under this package's CJS output and throw `ERR_REQUIRE_ESM` on Node < 22.12, below the declared `>=20` engine floor). Also wires `standardFontDataUrl` to `pdfjs-dist`'s bundled `standard_fonts/` directory as a plain filesystem path (not a `file://` URL string — pdfjs-dist's Node font loader passes it straight to `fs.promises.readFile`) — without it, pages with non-embedded standard-font text (Helvetica, Times, etc.) silently rasterize as blank; caught by a dedicated non-blank-pixel regression test before it could ship.
+- `apps/worker/src/index.ts`, `apps/web/lib/queue.ts` — registered `pdf-to-image` as a fourth BullMQ job name/payload type alongside merge/split/compress.
+- `apps/web/app/api/pdf-to-image/jobs/route.ts` + `[jobId]/status/route.ts` + `[jobId]/download/route.ts` — new routes mirroring Compress's upload/status/download routes exactly, including the ADR-008 ownership guard.
+- 5 new worker unit tests (`pdf-to-image.test.ts`, real `pdfjs-dist`/`@napi-rs/canvas` run against fixture PDFs, only I/O boundaries mocked, including a dedicated non-blank-pixel regression test) + 26 new web route tests (`route.test.ts` × 3). AC-01–AC-11 and AC-18 verified; AC-12–AC-23 remain for Sessions 033–034.
+- `npm run typecheck` (0 errors), `npm run lint` (0 errors/warnings), `npm run test` (178 web + 21 worker, all passing, no regressions to Merge/Split/Compress/Auth/Job History).
+
+**Session 031 — Planning, ADR-009 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — full PDF to Image spec: fixed-150-DPI rasterization via Sharp's bundled PDFium, user-chosen PNG/JPEG output, all-pages-only (no ranges), always-ZIP output packaging (mirrors Split), participation in Job History (ADR-008) as a fourth job type with no `/history` page changes needed. 23 acceptance criteria.
+- `docs/adr/009-pdf-to-image-rasterization.md` — documents the rasterization library decision: Sharp + bundled PDFium chosen over `pdfjs-dist`+canvas and a `poppler-utils` CLI wrapper, on the grounds of zero new dependencies (Sharp is already vetted per ADR-006) and no new system-level binary requirement.
+- Identified (not yet fixed — Session 033) a latent bug in `apps/web/app/history/download-button.tsx`: its `jobType.toLowerCase()` route-slug derivation only works for single-word job types; `PDF_TO_IMAGE` would incorrectly produce `pdf_to_image` instead of the kebab-case `pdf-to-image` route.
+- `TASKS.md` updated — PDF to Image is now the Current Feature (Status: PLANNING); removed from Future Backlog, remaining items renumbered.
+
+---
+
 ## [0.5.0] — 2026-07-01
 
 ### Added (Job History)
