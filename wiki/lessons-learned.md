@@ -58,6 +58,18 @@ Add entries after completing a feature, resolving a production issue, or a notab
 **Lesson:** A monorepo Dockerfile that does `COPY . .` after `npm install` needs a `.dockerignore` from day one — without it, the image silently runs on a mix of container-built and host-built artifacts that happens to "work" until a platform-specific binary (a native addon, a Prisma engine) is involved, then fails in a way that looks like an application bug. Test `docker compose up --build` from a clean state (or at least reason about what `COPY . .` actually copies) before trusting a containerized dev environment.
 **Applies to:** DX, developer experience, infrastructure
 
+### 2026-07-01 — A library's custom `Error` subclass can silently fail `instanceof` in an ES5 build
+**Context:** PDF Compress Session 019 — detecting encrypted PDFs by catching pdf-lib's `EncryptedPDFError` from `PDFDocument.load()`.
+**What happened:** `catch (err) { if (err instanceof EncryptedPDFError) ... }` never matched, even though pdf-lib clearly threw that error type. pdf-lib 1.17.1's build targets ES5, and its `EncryptedPDFError` extends the native `Error` via a helper whose `super()` call returns a fresh plain `Error` object rather than initializing `this` — a known ES5-transpilation pitfall for subclassing built-ins. The thrown object's prototype chain doesn't actually include `EncryptedPDFError.prototype`.
+**Lesson:** When an `instanceof` check against a third-party library's custom error class silently fails, suspect the library's build target before assuming the wrong error is being thrown — log/inspect the caught object's constructor name and message directly. A message-substring match (`err.message.includes('is encrypted')`) is a reasonable fallback when a library's error hierarchy can't be trusted across its transpiled build.
+**Applies to:** architecture, testing
+
+### 2026-07-01 — When a library exposes low-level document structure but no rendering semantics, you may have to compute geometry yourself
+**Context:** PDF Compress Session 020 — downsampling embedded images to a target DPI required knowing each image's actual placed size on the page, not just its raw pixel dimensions.
+**What happened:** pdf-lib has no public API for reading what size/position a page actually draws an image XObject at — that information only exists as operators (`cm`, `Do`) inside the page's content stream. Recompressing purely off pixel dimensions would have downsampled correctly-sized images and under-downsampled oversized ones. A minimal hand-rolled tokenizer tracking `q`/`Q`/`cm`/`Do` through the content stream was needed to resolve the effective CTM at each draw call — also handling an image reused at different sizes across pages (keep the largest) and rotated placements.
+**Lesson:** A "read-only" library operation (here: figuring out an image's on-page size) can require reimplementing a sliver of the format's execution model when the library only exposes structure, not semantics. Before writing that code, check whether the scope can be narrowed (this implementation explicitly did not walk into nested Form XObjects, falling back to quality-only recompression there) rather than building a general-purpose interpreter for a v1.
+**Applies to:** architecture, performance
+
 ---
 
 ## Categories to Watch
@@ -91,4 +103,4 @@ The following categories commonly produce learnable moments in document-processi
 
 ---
 
-*Last updated: 2026-07-01 — Session 015 (PDF Split Complete)*
+*Last updated: 2026-07-01 — Session 022 (PDF Compress Complete)*
