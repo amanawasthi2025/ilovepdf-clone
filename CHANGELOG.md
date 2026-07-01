@@ -11,6 +11,17 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (Job History — In Progress)
 
+**Session 029 — Frontend: `/history` page, nav "History" link (2026-07-01)**
+- `apps/web/app/history/page.tsx` — new Server Component; redirects to `/login` when unauthenticated (via `next/navigation`'s `redirect()`); otherwise queries `prisma.job.findMany` for the current user's jobs (most recent 50, newest first) and renders job type, status, created date, a `FAILED` job's error message, and a `COMPLETED` job's `DownloadButton`
+- `apps/web/app/history/download-button.tsx` — new client component, parameterized by `jobId`/`jobType`, reusing each tool's existing per-type `GET /api/{type}/jobs/:id/download` endpoint and navigating the browser to the returned pre-signed URL; shows an inline error on failure
+- `apps/web/components/nav.tsx` — added a "History" link, shown only when a session exists
+- **Bug found and fixed during manual browser verification:** `apps/web/lib/auth.ts` had no `jwt`/`session` callbacks, so `session.user.id` was never populated at runtime (Auth.js v5 doesn't propagate it by default) — confirmed by hitting `GET /api/auth/session` after a real login and seeing no `id` field. This silently broke Session 028's entire association/ownership mechanism in production (every real job would associate as anonymous) despite all of Session 028's unit tests passing, because those tests mock `auth()` directly rather than exercising the real NextAuth config. Fixed by adding `jwt`/`session` callbacks copying the id through; see `wiki/lessons-learned.md` for the full writeup
+- Added `@testing-library/react` + `@testing-library/jest-dom` as new devDependencies (first React-component-level unit tests in this repo) plus `apps/web/vitest.setup.ts` and an `esbuild.jsx: 'automatic'` config tweak so JSX transforms in tests
+- 14 new unit tests: `download-button.test.tsx` (4), `page.test.tsx` (4), `nav.test.tsx` (2), plus 4 new tests on the `jwt`/`session` callbacks in `lib/auth.test.ts`
+- Manually verified end-to-end against the real local stack (native Postgres/Redis/MinIO, `next dev`, worker): signup → login → submit a Compress job → job appears in `/history` as `COMPLETED` → Download control successfully triggers the file download; unauthenticated `/history` redirects to `/login`
+- `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (152 web + 16 worker, all passing)
+- Covers AC-08–AC-15 of the Job History spec (history page + nav); AC-23/AC-24 (Playwright E2E) remain for Session 030
+
 **Session 028 — Schema (`Job.userId`) + Association + Ownership Enforcement (2026-07-01)**
 - `prisma/schema.prisma` — `Job` gains a nullable `userId String?` + `user User?` relation (`onDelete: Cascade`, matching the existing `Account`/`Session` pattern); `User` gains the reverse `jobs Job[]` field; migration `20260701102708_add_job_user_id` applied
 - `apps/web/app/api/{merge,split,compress}/jobs/route.ts` — each upload route now calls `auth()` before creating the `Job` row and passes `session?.user?.id` into `data.userId`; anonymous submissions leave it `undefined`/`null`, unchanged from before

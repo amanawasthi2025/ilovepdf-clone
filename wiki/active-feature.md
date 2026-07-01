@@ -7,10 +7,10 @@
 
 ## Current Feature: Job History
 
-**Status:** IN PROGRESS (Session 028 of 030 complete)
+**Status:** IN PROGRESS (Session 029 of 030 complete)
 **Started:** 2026-07-01
 **Branch:** `feature/job-history`
-**Sessions:** 027 (planning) ✅ → 028 (schema/association/ownership) ✅ → 029–030 (remaining)
+**Sessions:** 027 (planning) ✅ → 028 (schema/association/ownership) ✅ → 029 (frontend) ✅ → 030 (remaining)
 
 ---
 
@@ -150,7 +150,7 @@ No new REST endpoint is introduced — nothing else needs this data yet (YAGNI),
 
 - [x] AC-01: A job submitted while logged in has its `Job.userId` set to that user's id
 - [x] AC-02: A job submitted while logged out has `Job.userId` null — unchanged from today
-- [ ] AC-03: A user's history never includes jobs created before this feature shipped, or jobs created while logged out (no retroactive claiming) — verified once `/history` exists (Session 029)
+- [ ] AC-03: A user's history never includes jobs created before this feature shipped, or jobs created while logged out (no retroactive claiming) — history query already scopes to `userId`, which is `null` for such jobs; formal E2E confirmation is Session 030
 
 ### Authorization
 
@@ -161,14 +161,14 @@ No new REST endpoint is introduced — nothing else needs this data yet (YAGNI),
 
 ### History Page
 
-- [ ] AC-08: Visiting `/history` while logged in shows the user's own jobs, most recent first
-- [ ] AC-09: Each row shows job type, status, and created date
-- [ ] AC-10: A `COMPLETED` row's download control successfully downloads the correct output file
-- [ ] AC-11: A `FAILED` row shows its error message
-- [ ] AC-12: The list is capped to the 50 most recent jobs
-- [ ] AC-13: Visiting `/history` while logged out redirects to `/login`
-- [ ] AC-14: A user's history never shows another user's jobs or anonymous jobs
-- [ ] AC-15: Nav shows a "History" link only when logged in
+- [x] AC-08: Visiting `/history` while logged in shows the user's own jobs, most recent first
+- [x] AC-09: Each row shows job type, status, and created date
+- [x] AC-10: A `COMPLETED` row's download control successfully downloads the correct output file
+- [x] AC-11: A `FAILED` row shows its error message
+- [x] AC-12: The list is capped to the 50 most recent jobs
+- [x] AC-13: Visiting `/history` while logged out redirects to `/login`
+- [x] AC-14: A user's history never shows another user's jobs or anonymous jobs (enforced by the `where: { userId: session.user.id }` query)
+- [x] AC-15: Nav shows a "History" link only when logged in
 
 ### Anonymous Tools Unaffected
 
@@ -179,9 +179,9 @@ No new REST endpoint is introduced — nothing else needs this data yet (YAGNI),
 
 ### Quality
 
-- [ ] AC-20: `npm run typecheck` exits with 0 errors
-- [ ] AC-21: `npm run lint` exits with 0 errors/warnings
-- [ ] AC-22: `npm run test` passes all unit and integration tests
+- [x] AC-20: `npm run typecheck` exits with 0 errors
+- [x] AC-21: `npm run lint` exits with 0 errors/warnings
+- [x] AC-22: `npm run test` passes all unit and integration tests
 - [ ] AC-23: Playwright E2E test passes: submit a job while logged in → job appears in `/history` with correct type/status → download succeeds
 - [ ] AC-24: Playwright E2E test passes: `/history` redirects to `/login` when logged out; a job owned by one user returns `403` when its status/download endpoint is requested using a different user's session
 
@@ -206,7 +206,7 @@ No open questions remain that block implementation.
 |---|---|---|
 | 027 | Planning, ADR-008 & Acceptance Criteria | COMPLETE ✅ |
 | 028 | Schema (`Job.userId`) + Association (upload routes) + Ownership Enforcement (status/download routes) | COMPLETE ✅ |
-| 029 | Frontend: `/history` page, nav "History" link | Not started |
+| 029 | Frontend: `/history` page, nav "History" link | COMPLETE ✅ |
 | 030 | E2E Tests, Polish & Definition of Done | Not started |
 
 ---

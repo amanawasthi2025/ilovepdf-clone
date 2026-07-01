@@ -22,6 +22,12 @@ Add entries after completing a feature, resolving a production issue, or a notab
 
 ## Lessons
 
+### 2026-07-01 — Mocked `auth()` in unit tests hid that `session.user.id` was never populated at runtime
+**Context:** Job History Session 029 — building `/history`, which redirects unauthenticated visitors via `session?.user?.id`. Manual browser verification (per the UI-testing requirement) had a real signed-in user immediately bounced back to `/login`.
+**What happened:** `lib/auth.ts` (from the User Authentication feature, Session 024) never defined `jwt`/`session` callbacks. Auth.js v5's defaults do **not** propagate `user.id` from the `authorize()` return value onto the JWT or the session — `GET /api/auth/session` returned `{"user":{"email":"..."}}` with no `id`, confirmed by hitting the endpoint directly after a real signup+login. Every route touched by Job History Session 028 (`userId: session?.user?.id` on upload, ownership checks on status/download) depends on this field, but its unit tests mock `auth()` to return `{ user: { id } }` directly, so they never exercised the real NextAuth config and all passed anyway. In production, every job would have silently associated as anonymous (`userId: null`) regardless of login state, and this session's own `/history` page would have been permanently unreachable.
+**Lesson:** When a unit test mocks the boundary that a bug lives in (here, `auth()` itself), passing tests prove nothing about that boundary. Session 024's Definition of Done ran E2E tests for signup/login/logout/nav-state but not for a downstream consumer reading `session.user.id` — the gap only surfaced once something *else* (Job History) exercised that field for real. Any new field a session callback is expected to carry needs at least one test that goes through the real `NextAuth()` config (captured via the mocked `next-auth` module's constructor args, as added in `lib/auth.test.ts`), not just a hand-built stub of its shape.
+**Applies to:** testing, security
+
 ### 2026-06-30 — Never call `setState` inside TanStack Query's `select`
 **Context:** PDF Merge frontend — `useQuery` polling job status; `select` was used to drive DONE/ERROR phase transitions.
 **What happened:** `select` is a pure transform called on *every render* to shape cached data, not only when new data arrives from the network. Calling `setPhase()` inside it triggered a re-render → `select` ran again → `setPhase()` again → infinite loop crash (`Too many re-renders`).
@@ -115,4 +121,4 @@ The following categories commonly produce learnable moments in document-processi
 
 ---
 
-*Last updated: 2026-07-01 — Session 022 (PDF Compress Complete)*
+*Last updated: 2026-07-01 — Session 029 (Job History: `/history` page, nav link, auth session.user.id fix)*
