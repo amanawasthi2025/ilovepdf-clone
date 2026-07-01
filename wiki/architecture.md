@@ -40,21 +40,25 @@ User Browser
 
 ### Local Development
 
+Infrastructure runs natively on the host (see ADR-004 — no Docker):
+
 ```
-Docker Compose
-├── app (Next.js: port 3000)
-├── worker (BullMQ Node.js worker)
-├── postgres (PostgreSQL: port 5432)
-├── redis (Redis: port 6379)
-└── minio (S3-compatible storage: port 9000, console 9001)
+Native services
+├── app (Next.js dev server: port 3000, `npm run dev`)
+├── worker (BullMQ Node.js worker via tsx, `npm run dev`)
+├── postgres (native install: port 5432)
+├── redis (native install: port 6379)
+└── minio (standalone binary: port 9000, console 9001)
 ```
 
 ### Production (Target)
 
+Not yet built. The deployment target (containerized, PaaS, or otherwise) is TBD and will be decided when production deployment is actually undertaken — this is intentionally left undecided rather than speculated on. What's fixed regardless of that choice:
+
 ```
 Cloud Provider
-├── App Server (containerized Next.js)
-├── Worker Pool (containerized workers, horizontally scalable)
+├── App Server (Next.js)
+├── Worker Pool (horizontally scalable)
 ├── PostgreSQL (managed, e.g. RDS or Supabase)
 ├── Redis (managed, e.g. Upstash or ElastiCache)
 └── S3 (AWS S3 or compatible)
@@ -100,14 +104,6 @@ Cloud Provider
 ├── prisma/
 │   ├── schema.prisma            # Database schema
 │   └── migrations/              # Migration history
-│
-├── docker/
-│   ├── Dockerfile.web
-│   ├── Dockerfile.worker
-│   └── ...
-│
-├── docker-compose.yml           # Local development environment
-├── docker-compose.prod.yml      # Production compose reference
 │
 ├── wiki/                        # Long-term knowledge base
 ├── docs/
@@ -241,11 +237,11 @@ Cloud Provider
 
 ### Infrastructure / Tooling
 
-**Docker + Docker Compose**
+**Native local services (PostgreSQL, Redis, MinIO)**
 
-- Reproducible development environment
-- Every developer (or Claude Code session) gets identical infrastructure
-- Production Dockerfiles are in the same repo
+- No containerization for local development — see ADR-004
+- PostgreSQL and Redis installed natively via the OS package manager; MinIO runs as a standalone binary
+- Application code is unaffected: both still speak the same protocols (Postgres wire protocol, Redis protocol, S3-compatible HTTP API) as their managed-service production counterparts
 
 **GitHub Actions**
 
@@ -290,4 +286,4 @@ Cloud Provider
 
 ---
 
-*Last updated: 2026-06-30 — Session 001 (Project Initialization)*
+*Last updated: 2026-07-01 — Session 016 (Remove Docker, Native Local Dev)*

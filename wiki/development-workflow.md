@@ -157,11 +157,7 @@ Every push to any branch triggers:
 5. Build (next build)
 ```
 
-Every PR to `develop` or `main` additionally runs:
-
-```
-6. E2E tests (Playwright, against a Docker Compose environment)
-```
+E2E tests (Playwright) are run manually against a locally running stack — see below. They are not currently part of the automated CI pipeline.
 
 The pipeline must be green before merge. No exceptions.
 
@@ -169,15 +165,30 @@ The pipeline must be green before merge. No exceptions.
 
 ## Local Development Setup
 
-See `README.md` in the root of the repository for the quick-start guide.
+No Docker required — see ADR-004. PostgreSQL, Redis, and MinIO run as native local services; `apps/web` and `apps/worker` run directly on the host via `npm run dev`.
 
-The minimum requirement to run the application locally is Docker and Docker Compose. Everything — database, Redis, storage — runs in containers.
-
+**One-time setup:**
 ```bash
-cp .env.example .env.local   # fill in any required values
-docker compose up -d          # start infrastructure
-npm run dev                   # start Next.js dev server
-npm run worker:dev            # start worker in dev mode (separate terminal)
+# PostgreSQL and Redis (Debian/Ubuntu)
+sudo apt-get install -y postgresql redis-server
+sudo systemctl enable --now postgresql redis-server
+
+# Create the app role/database (matches .env.example)
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+sudo -u postgres createdb ilovepdf
+
+# MinIO standalone binary
+curl -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio -o ~/.local/bin/minio
+chmod +x ~/.local/bin/minio
+```
+
+**Every session:**
+```bash
+cp .env.example .env          # fill in any required values (defaults work as-is)
+MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin \
+  minio server ~/minio-data --console-address ":9001" &   # start object storage
+npx prisma migrate dev        # apply schema (first run / after schema changes)
+npm run dev                   # starts both web and worker via Turborepo
 ```
 
 ---
@@ -218,4 +229,4 @@ At the end of every Claude Code session:
 
 ---
 
-*Last updated: 2026-06-30 — Session 001 (Project Initialization)*
+*Last updated: 2026-07-01 — Session 016 (Remove Docker, Native Local Dev)*

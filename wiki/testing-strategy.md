@@ -69,7 +69,7 @@ describe('validateMergeInput', () => {
 
 **Purpose:** Verify that components work correctly together — particularly API endpoints interacting with a real database, real Redis, and real S3-compatible storage.
 
-**Tool:** Vitest (with real infrastructure via Docker Compose)
+**Tool:** Vitest (with real infrastructure running natively — see ADR-004)
 
 **What to test:**
 - Every API route handler (happy path + error paths)
@@ -77,7 +77,7 @@ describe('validateMergeInput', () => {
 - Queue operations (enqueue → worker processes → status updated)
 - File upload and storage round-trips
 
-**Infrastructure:** Integration tests run against a dedicated test instance of all services (separate Docker Compose profile or environment variables pointing to test containers). Never run integration tests against production data.
+**Infrastructure:** Integration tests run against a dedicated local test instance of all services (native PostgreSQL, Redis, and MinIO, selected via environment variables pointing at test-specific databases/buckets). Never run integration tests against production data.
 
 **Location:** `<route-or-service>.integration.test.ts` co-located with the source.
 
@@ -193,7 +193,7 @@ test('user can merge two PDFs and download the result', async ({ page }) => {
 # Unit tests (fast — no infrastructure required)
 npm run test:unit
 
-# Integration tests (requires Docker Compose infra running)
+# Integration tests (requires local Postgres/Redis/MinIO running)
 npm run test:integration
 
 # E2E tests (requires full app running)
@@ -233,4 +233,4 @@ A test is bad if:
 
 ---
 
-*Last updated: 2026-06-30 — Session 001 (Project Initialization)*
+*Last updated: 2026-07-01 — Session 016 (Remove Docker, Native Local Dev)*

@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.1] — 2026-07-01
+
+### Changed
+
+**Session 016 — Remove Docker, Native Local Dev (2026-07-01)**
+- Removed `docker-compose.yml`, `docker/` (`Dockerfile.web`, `Dockerfile.worker`), `.dockerignore` — local development infrastructure (PostgreSQL, Redis, MinIO) now runs natively instead of in containers; see ADR-004
+- No application code changes — `apps/web` and `apps/worker` already ran natively via `npm run dev`, and the S3-compatible storage client is unaffected (still MinIO, just not containerized)
+- Updated `PROJECT.md`, `wiki/architecture.md`, `wiki/development-workflow.md`, and `wiki/testing-strategy.md` to describe native local services instead of Docker Compose
+- `wiki/architecture.md`'s "Production (Target)" deployment section changed from an assumed containerized deployment to explicitly TBD — no production deployment exists yet, so this is left undecided rather than replaced with new speculative infrastructure
+
 ## [0.2.0] — 2026-07-01
 
 ### Added (PDF Split — Complete ✅)
