@@ -7,35 +7,44 @@
 
 ## Current Feature
 
-None — PDF Split is complete and awaiting the next feature to be approved per the One-Feature-at-a-Time rule.
+**None — awaiting explicit approval for the next feature.**
+
+Per the One-Feature-at-a-Time Rule, PDF Compress is now COMPLETE (see below) and no new feature has been started. See the Future Backlog for candidates.
 
 ---
 
 ## Previous Feature (Approved)
 
-**Feature:** PDF Split
+**Feature:** PDF Compress
 **Status:** COMPLETE ✅
-**Branch:** `feature/pdf-split`
+**Branch:** `feature/pdf-compress`
 **Completed:** 2026-07-01
 **Spec:** `wiki/active-feature.md`
 
 ### Description
-Allow a user to upload a single PDF and a set of custom page ranges, split it into one PDF per range, package the results into a ZIP archive, and download it. No authentication required. Reuses the full pipeline established by PDF Merge.
+Allow a user to upload a single PDF and a compression level (Low / Recommended / High), recompress its embedded images via pdf-lib + Sharp (ADR-006) and optimize its object structure, and download the resulting smaller PDF. No authentication required. Reuses the full pipeline established by Merge/Split.
 
 ### Session Breakdown
 | Session | Title | Status |
 |---|---|---|
-| 011 | Planning, ADR-003 & Acceptance Criteria | COMPLETE ✅ |
-| 012 | Split API (`POST /api/split/jobs`, validation) | COMPLETE ✅ |
-| 013 | Worker: pdf-lib Split Processor + jszip Archive | COMPLETE ✅ |
-| 014 | Frontend: `/split` Upload, Polling & Download UI | COMPLETE ✅ |
-| 015 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
+| 018 | Planning, ADR-006 & Acceptance Criteria | COMPLETE ✅ |
+| 019 | Compress API (`POST /api/compress/jobs`, validation) | COMPLETE ✅ |
+| 020 | Worker: pdf-lib Image Extraction + Sharp Recompression Processor | COMPLETE ✅ |
+| 021 | Frontend: `/compress` Upload, Level Selector, Polling & Download UI | COMPLETE ✅ |
+| 022 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ### Acceptance Criteria
-All 38 criteria verified — see `wiki/active-feature.md`.
+All 40 criteria verified — see `wiki/active-feature.md`.
 
 ### Blocked Items
 None.
+
+---
+
+**Feature:** PDF Split
+**Status:** COMPLETE ✅
+**Branch:** `feature/pdf-split`
+**Completed:** 2026-07-01
 
 ---
 
@@ -78,6 +87,7 @@ None.
 | 0 | Project Initialization & Engineering Foundation | 2026-06-30 | Docs, stack, process only |
 | 1 | PDF Merge | 2026-06-30 | Full pipeline; 36 ACs; 25 unit tests + 1 E2E |
 | 2 | PDF Split | 2026-07-01 | Custom ranges, ZIP output; 38 ACs; 75 unit tests + 4 E2E |
+| 3 | PDF Compress | 2026-07-01 | pdf-lib + Sharp image recompression, 3 levels; 40 ACs; 104 unit tests + 11 E2E |
 
 ---
 
@@ -88,31 +98,28 @@ None.
 
 | Priority | Feature | Notes |
 |---|---|---|
-| 1 | **PDF Merge** | Core tool; exercises full pipeline (upload → process → download) |
-| 2 | **PDF Split** | Complements merge; high user demand |
-| 3 | **PDF Compress** | High demand; reduces file size |
-| 4 | **User Authentication** | Required before job history or rate limiting |
-| 5 | **PDF to Image** | Converts pages to PNG/JPG |
-| 6 | **Image to PDF** | Inverse of above |
-| 7 | **PDF Rotate** | Simple but commonly needed |
-| 8 | **Job History** | Requires auth; allows users to re-download outputs |
-| 9 | **PDF to Word** | Complex conversion; requires LibreOffice |
-| 10 | **Word to PDF** | Inverse of above |
-| 11 | **Subscription / Payments** | Monetization; requires auth |
-| 12 | **PDF Watermark** | Add text/image watermark |
-| 13 | **PDF Unlock** | Remove password protection |
-| 14 | **PDF Protect** | Add password protection |
-| 15 | **Developer API** | Programmatic access; requires auth + subscriptions |
+| 1 | **User Authentication** | Required before job history or rate limiting |
+| 2 | **PDF to Image** | Converts pages to PNG/JPG |
+| 3 | **Image to PDF** | Inverse of above |
+| 4 | **PDF Rotate** | Simple but commonly needed |
+| 5 | **Job History** | Requires auth; allows users to re-download outputs |
+| 6 | **PDF to Word** | Complex conversion; requires LibreOffice |
+| 7 | **Word to PDF** | Inverse of above |
+| 8 | **Subscription / Payments** | Monetization; requires auth |
+| 9 | **PDF Watermark** | Add text/image watermark |
+| 10 | **PDF Unlock** | Remove password protection |
+| 11 | **PDF Protect** | Add password protection |
+| 12 | **Developer API** | Programmatic access; requires auth + subscriptions |
 
 ---
 
 ## Notes
 
-- Backlog items marked 1–3 are tool features that **do not require user auth**.
-- Item 4 (auth) is intentionally placed after initial tools to allow anonymous usage validation.
-- Items 9–10 require LibreOffice headless — architectural complexity increases there.
-- Items 11+ require payment infrastructure — significant scope jump.
+- Merge, Split, and Compress (the initial anonymous-usage tool set) are all complete.
+- Item 1 (auth) is next up now that anonymous usage across three tools has been validated.
+- Items 6–7 require LibreOffice headless — architectural complexity increases there.
+- Items 8+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 015 (PDF Split Complete)*
+*Last updated: 2026-07-01 — Session 022 (PDF Compress: E2E, Polish & Definition of Done — feature complete)*

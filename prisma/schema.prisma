@@ -10,22 +10,24 @@ datasource db {
 }
 
 model Job {
-  id            String    @id @default(cuid())
-  jobType       JobType
-  status        JobStatus @default(PENDING)
-  inputKeys     String[]
-  outputKey     String?
-  splitRanges   String?
-  errorMessage  String?
-  correlationId String    @unique
-  expiresAt     DateTime
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               String            @id @default(cuid())
+  jobType          JobType
+  status           JobStatus         @default(PENDING)
+  inputKeys        String[]
+  outputKey        String?
+  splitRanges      String?
+  compressionLevel CompressionLevel?
+  errorMessage     String?
+  correlationId    String            @unique
+  expiresAt        DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 enum JobType {
   MERGE
   SPLIT
+  COMPRESS
 }
 
 enum JobStatus {
@@ -33,4 +35,10 @@ enum JobStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum CompressionLevel {
+  LOW
+  RECOMMENDED
+  HIGH
 }

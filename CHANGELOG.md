@@ -7,6 +7,58 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.3.0] — 2026-07-01
+
+### Added (PDF Compress)
+
+**Session 022 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/compress.spec.ts` — parametrized the full compress-and-download flow test over all three compression levels (Low/Recommended/High), each verifying downloaded output is smaller than the input with page count/order/dimensions preserved (AC-39); previously only Recommended had full download-flow coverage
+- Ran full Definition of Done checklist: `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (104/104 — 88 web + 16 worker), `npx playwright test` (11/11 against the live local stack — native Postgres/Redis/MinIO per ADR-004, `next dev`, worker `npm run dev`)
+- Confirmed AC-40: no authentication logic exists anywhere in the `/api/compress/*` routes, consistent with Merge/Split
+- All 40 acceptance criteria now verified — PDF Compress is feature-complete
+- `TASKS.md`, `wiki/active-feature.md`, `wiki/completed-features.md` updated to mark the feature Done; Current Feature reset to none pending explicit approval for the next feature (per the One-Feature-at-a-Time Rule)
+
+**Session 021 — Frontend: `/compress` Upload, Level Selector, Polling & Download UI (2026-07-01)**
+- `apps/web/app/compress/page.tsx` — the `/compress` route: IDLE → UPLOADING → PROCESSING → DONE/ERROR state machine, modeled directly on `apps/web/app/split/page.tsx`'s dropzone/polling/download pattern
+- Compression level selector (Low / Recommended / High as a `role="radiogroup"` of buttons), `RECOMMENDED` selected by default; Compress button disabled until a file is selected, enabled for any level since one is always selected
+- Client-side validation reused from the Merge/Split pattern: non-PDF and >50MB files rejected at drop/select with an inline error, before ever reaching the API
+- TanStack Query polling of `GET /api/compress/jobs/:jobId/status` every 2 seconds while PROCESSING, stopping on `COMPLETED`/`FAILED`; DONE state triggers a real browser download via the pre-signed URL from `GET /api/compress/jobs/:jobId/download`
+- `UNSUPPORTED_ENCRYPTED_PDF` (and any other 4xx/5xx from the upload API) surfaces via the same generic upload-error banner Split uses for its own server-side validation errors — no encryption-specific UI branch needed
+- `apps/web/app/compress/validation.ts` — `MAX_FILE_SIZE_BYTES`/`formatBytes`, with 7 new unit tests
+- `apps/web/e2e/compress.spec.ts` — 5 new Playwright E2E tests: full compress-and-download flow at the Recommended level with page count/size/order verified, level-selector interaction (AC-05), the `UNSUPPORTED_ENCRYPTED_PDF` error-banner path (AC-20, via `page.route` since a real encrypted-PDF fixture isn't buildable with this stack's dependencies), a network-failure-during-upload path (AC-24), and a seeded post-queue FAILED job driving the real ERROR state (AC-22/23). The fixture PDF's embedded image is built by hand via pdf-lib's low-level `context.flateStream`/`context.register` API (a real in-scope `/DeviceRGB` + `/FlateDecode` raw bitmap) rather than adding `sharp`/JPEG-encoding to `apps/web` — `sharp` stays a worker-only dependency per ADR-006
+- 29 of 40 acceptance criteria now verified (all of Upload, Processing & Download, Error Handling except the final E2E/DoD sign-off criteria reserved for Session 022)
+- Quality gates green across the whole monorepo: `npm run typecheck` (0 errors), `npm run lint` (0 warnings), `npm run test` (88/88 web + 16/16 worker), `npx playwright test` (9/9, including the pre-existing Merge/Split suites — no regressions)
+- Manually verified against the real local stack (native Postgres/Redis/MinIO, `next dev`, worker `npm run dev`): all Playwright specs driven against live services, plus a direct screenshot of the IDLE state confirming the level selector and dropzone render correctly
+
+**Session 020 — Worker: pdf-lib Image Extraction + Sharp Recompression Processor (2026-07-01)**
+- `apps/worker/src/jobs/compress.ts` — the `compress` job processor: enumerates image XObjects via `pdf-lib`'s low-level object API, recompresses in-scope images (`/DCTDecode` RGB/Grayscale JPEG, `/FlateDecode` raw RGB/Grayscale bitmap) through Sharp per the selected level's max DPI and JPEG quality, leaves out-of-scope images (CMYK, Indexed, JPXDecode, CCITTFaxDecode) untouched, and saves with `useObjectStreams: true`
+- DPI-based downsampling is computed relative to each image's actual **placed size** on the page, not just its pixel dimensions — a minimal hand-rolled content-stream tokenizer tracks `q`/`Q`/`cm`/`Do` to resolve the CTM in effect at each draw call (pdf-lib has no public API for reading a page's drawing operators); correctly handles rotated placements and an image reused at different sizes across pages by keeping the largest
+- Images only reachable via a nested Form XObject (not walked in v1) fall back to quality-only JPEG re-encoding rather than guessing a resize target
+- Every recompression is compared against the original size and discarded if not smaller, so pathological inputs never make the output larger
+- `sharp` added as a dependency of `apps/worker` only (per ADR-006)
+- Wired `compress` job name into `apps/worker/src/index.ts`'s dispatcher
+- Proof-of-concept spike (opened the session, per the risk flagged in Session 018/019) confirmed the pdf-lib low-level API approach: `decodePDFRawStream()` doesn't support `/DCTDecode` (read via `getContents()` instead — it's already a complete JPEG); `PDFRawStream.contents` is readonly with a private constructor, so stream replacement uses `context.assign(ref, PDFRawStream.of(...))`, the same mechanism pdf-lib's own JPEG/PNG embedders use; Sharp's JPEG encoder defaults to sRGB output regardless of input channel count, so grayscale sources need an explicit `.toColourspace('b-w')` to stay 1-channel
+- 7 new unit tests using real pdf-lib/Sharp against generated fixture PDFs (only db/storage/logger mocked) — JPEG recompression smaller at every level, grayscale FlateDecode preserving `/DeviceGray`, text-only PDF still completing (AC-18), CMYK image left untouched, and the FAILED paths
+- Manually verified against the live local stack: a 1.79MB fixture PDF compressed to 446KB (LOW, 75.1% reduction), 151KB (RECOMMENDED, 91.6%), and 27KB (HIGH, 98.5%), with all three outputs downloading, opening, and rendering correctly with the original page count and layout intact
+
+**Session 019 — Compress API (2026-07-01)**
+- `POST /api/compress/jobs` — multipart upload (`file` + optional `level`, defaults to `RECOMMENDED`); validates MIME type, magic bytes, file size, and `level` (`LOW`/`RECOMMENDED`/`HIGH`); detects encrypted PDFs via pdf-lib load failure and returns `400 UNSUPPORTED_ENCRYPTED_PDF`; uploads to MinIO, creates a `COMPRESS` job record, enqueues a `compress` job on the shared `document-processing` queue; returns `202 { jobId }`
+- `GET /api/compress/jobs/:jobId/status` and `GET /api/compress/jobs/:jobId/download` — same contract as Merge/Split, scoped to `COMPRESS` jobs; download filename is `compressed-YYYY-MM-DD.pdf`
+- `apps/web/lib/queue.ts` — `documentProcessingQueue` generic widened to include `CompressJobPayload`
+- 15 new unit tests covering every error code in the API contract (`FILE_REQUIRED`, `INVALID_FILE_TYPE`, `FILE_TOO_LARGE`, `INVALID_COMPRESSION_LEVEL`, `UNSUPPORTED_ENCRYPTED_PDF`) plus the success paths (explicit level, default level) and the status/download endpoints
+- Found and worked around a pdf-lib 1.17.1 bug: `EncryptedPDFError` fails `instanceof` checks because its ES5-targeted build extends the native `Error` class via a helper whose `super()` call returns a fresh plain `Error` rather than initializing `this`, discarding the subclass prototype. Detection uses `err.message.includes('is encrypted')` instead
+- Manually verified all success/error paths against the local dev stack (Postgres/Redis/MinIO, native per ADR-004) with `curl`
+
+**Session 018 — Planning, ADR-006 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — complete PDF Compress spec (compression level presets and parameters, image color-space/filter scope, job lifecycle, API contract, worker spec including the image recompression pipeline, frontend state machine, 40 ACs)
+- `docs/adr/006-sharp-image-recompression.md` — Decision: pdf-lib + Sharp for image recompression (rejected pdf-lib-only for insufficient compression, rejected Ghostscript for reversing ADR-001's system-dependency/AGPL rejection)
+- `prisma/schema.prisma` — added `COMPRESS` to `JobType` enum, added `CompressionLevel` enum (`LOW | RECOMMENDED | HIGH`), added `Job.compressionLevel: CompressionLevel?`; migration `20260701060835_add_compress_job_type` applied
+- `packages/shared/src/types/job.ts` — added `JobType.COMPRESS`, `CompressionLevel` enum, and `CompressJobPayload` type
+- 5-session implementation breakdown (Sessions 018–022)
+- Risk flagged for Session 020: exact low-level pdf-lib API for mutating image XObject stream bytes needs a proof-of-concept spike before the full processor is written
+
+---
+
 ## [0.2.2] — 2026-07-01
 
 ### Changed
