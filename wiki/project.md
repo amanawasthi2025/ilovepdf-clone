@@ -52,7 +52,7 @@ The free tier is generous enough to be genuinely useful, which drives word-of-mo
 - Processing time for a 10-page PDF merge < 5 seconds
 - The output file opens correctly in standard PDF viewers
 - The application handles errors gracefully (user sees a helpful message, not a crash)
-- The system runs reliably in a Docker Compose environment
+- The system runs reliably on native local infrastructure (PostgreSQL, Redis, MinIO — see ADR-004)
 
 ---
 
@@ -72,4 +72,4 @@ All decisions are made by the human developer. Claude Code assists with implemen
 
 ---
 
-*Last updated: 2026-06-30 — Session 001 (Project Initialization)*
+*Last updated: 2026-07-01 — Session 016 (Remove Docker, Native Local Dev)*

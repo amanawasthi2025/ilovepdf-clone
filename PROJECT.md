@@ -129,7 +129,7 @@ See `wiki/architecture.md` for full justification. Summary:
 | Testing | Vitest + Playwright | Fast unit tests, reliable E2E |
 | Linting | ESLint + Prettier | Consistent code style |
 | CI | GitHub Actions | Integrated, widely supported |
-| Containerization | Docker + Docker Compose | Reproducible local dev, easy deployment |
+| Local Dev Services | Native installs (PostgreSQL, Redis, MinIO) | No container overhead for a solo dev workflow; see ADR-004 |
 
 ---
 
