@@ -11,6 +11,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (PDF Compress — In Progress)
 
+**Session 019 — Compress API (2026-07-01)**
+- `POST /api/compress/jobs` — multipart upload (`file` + optional `level`, defaults to `RECOMMENDED`); validates MIME type, magic bytes, file size, and `level` (`LOW`/`RECOMMENDED`/`HIGH`); detects encrypted PDFs via pdf-lib load failure and returns `400 UNSUPPORTED_ENCRYPTED_PDF`; uploads to MinIO, creates a `COMPRESS` job record, enqueues a `compress` job on the shared `document-processing` queue; returns `202 { jobId }`
+- `GET /api/compress/jobs/:jobId/status` and `GET /api/compress/jobs/:jobId/download` — same contract as Merge/Split, scoped to `COMPRESS` jobs; download filename is `compressed-YYYY-MM-DD.pdf`
+- `apps/web/lib/queue.ts` — `documentProcessingQueue` generic widened to include `CompressJobPayload`
+- 15 new unit tests covering every error code in the API contract (`FILE_REQUIRED`, `INVALID_FILE_TYPE`, `FILE_TOO_LARGE`, `INVALID_COMPRESSION_LEVEL`, `UNSUPPORTED_ENCRYPTED_PDF`) plus the success paths (explicit level, default level) and the status/download endpoints
+- Found and worked around a pdf-lib 1.17.1 bug: `EncryptedPDFError` fails `instanceof` checks because its ES5-targeted build extends the native `Error` class via a helper whose `super()` call returns a fresh plain `Error` rather than initializing `this`, discarding the subclass prototype. Detection uses `err.message.includes('is encrypted')` instead
+- Manually verified all success/error paths against the local dev stack (Postgres/Redis/MinIO, native per ADR-004) with `curl`
+
 **Session 018 — Planning, ADR-006 & Acceptance Criteria (2026-07-01)**
 - `wiki/active-feature.md` — complete PDF Compress spec (compression level presets and parameters, image color-space/filter scope, job lifecycle, API contract, worker spec including the image recompression pipeline, frontend state machine, 40 ACs)
 - `docs/adr/006-sharp-image-recompression.md` — Decision: pdf-lib + Sharp for image recompression (rejected pdf-lib-only for insufficient compression, rejected Ghostscript for reversing ADR-001's system-dependency/AGPL rejection)

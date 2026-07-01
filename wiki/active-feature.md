@@ -348,24 +348,24 @@ The feature is Done when **all** of the following are verified:
 ### Error Handling
 
 - [ ] AC-20: Submitting an encrypted/password-protected PDF returns `400 UNSUPPORTED_ENCRYPTED_PDF` and the UI shows an error banner without losing the selected file
-- [ ] AC-21: Submitting an invalid `level` value returns `400 INVALID_COMPRESSION_LEVEL`
+- [x] AC-21: Submitting an invalid `level` value returns `400 INVALID_COMPRESSION_LEVEL`
 - [ ] AC-22: If the compress job fails after being queued, the page shows the ERROR state
 - [ ] AC-23: The ERROR state shows a "Try again" button that resets to IDLE
 - [ ] AC-24: A network error during upload shows an error banner and keeps the selected file intact
 
 ### API
 
-- [ ] AC-25: `POST /api/compress/jobs` with a valid PDF and valid level → 202 `{ jobId }`
-- [ ] AC-26: `POST /api/compress/jobs` with a valid PDF and omitted level → 202 `{ jobId }`, job defaults to `RECOMMENDED`
-- [ ] AC-27: `POST /api/compress/jobs` with no file → 400 `FILE_REQUIRED`
-- [ ] AC-28: `POST /api/compress/jobs` with a non-PDF → 400 `INVALID_FILE_TYPE`
-- [ ] AC-29: `POST /api/compress/jobs` with an invalid `level` → 400 `INVALID_COMPRESSION_LEVEL`
-- [ ] AC-30: `POST /api/compress/jobs` with an encrypted PDF → 400 `UNSUPPORTED_ENCRYPTED_PDF`
-- [ ] AC-31: `GET /api/compress/jobs/:jobId/status` for COMPLETED job → `{ status: "COMPLETED" }`
-- [ ] AC-32: `GET /api/compress/jobs/:jobId/status` for unknown ID → 404
-- [ ] AC-33: `GET /api/compress/jobs/:jobId/download` for COMPLETED job → `{ url }` (valid pre-signed URL)
-- [ ] AC-34: `GET /api/compress/jobs/:jobId/download` for PENDING job → 409 `JOB_NOT_COMPLETE`
-- [ ] AC-35: `GET /api/compress/jobs/:jobId/download` for unknown ID → 404
+- [x] AC-25: `POST /api/compress/jobs` with a valid PDF and valid level → 202 `{ jobId }`
+- [x] AC-26: `POST /api/compress/jobs` with a valid PDF and omitted level → 202 `{ jobId }`, job defaults to `RECOMMENDED`
+- [x] AC-27: `POST /api/compress/jobs` with no file → 400 `FILE_REQUIRED`
+- [x] AC-28: `POST /api/compress/jobs` with a non-PDF → 400 `INVALID_FILE_TYPE`
+- [x] AC-29: `POST /api/compress/jobs` with an invalid `level` → 400 `INVALID_COMPRESSION_LEVEL`
+- [x] AC-30: `POST /api/compress/jobs` with an encrypted PDF → 400 `UNSUPPORTED_ENCRYPTED_PDF`
+- [x] AC-31: `GET /api/compress/jobs/:jobId/status` for COMPLETED job → `{ status: "COMPLETED" }`
+- [x] AC-32: `GET /api/compress/jobs/:jobId/status` for unknown ID → 404
+- [x] AC-33: `GET /api/compress/jobs/:jobId/download` for COMPLETED job → `{ url }` (valid pre-signed URL)
+- [x] AC-34: `GET /api/compress/jobs/:jobId/download` for PENDING job → 409 `JOB_NOT_COMPLETE`
+- [x] AC-35: `GET /api/compress/jobs/:jobId/download` for unknown ID → 404
 
 ### Quality
 
@@ -396,11 +396,15 @@ No open questions remain that block implementation, aside from the pdf-lib low-l
 | Session | Title | Status |
 |---|---|---|
 | 018 | Planning, ADR-006 & Acceptance Criteria | COMPLETE ✅ |
-| 019 | Compress API (`POST /api/compress/jobs`, validation) | Not started |
+| 019 | Compress API (`POST /api/compress/jobs`, validation) | COMPLETE ✅ |
 | 020 | Worker: pdf-lib Image Extraction + Sharp Recompression Processor | Not started |
 | 021 | Frontend: `/compress` Upload, Level Selector, Polling & Download UI | Not started |
 | 022 | E2E Tests, Polish & Definition of Done | Not started |
 
 ---
 
-*Last updated: 2026-07-01 — Session 018 (Planning, ADR-006 & Acceptance Criteria)*
+## Implementation Notes (Session 019)
+
+**pdf-lib `EncryptedPDFError` cannot be detected via `instanceof`.** pdf-lib 1.17.1's ES5-targeted build extends the native `Error` class using a `tslib` `__extends` helper; its `super.call(this, msg)` invokes `Error` as a plain function, which returns a brand-new `Error` object rather than initializing `this` — so the resulting instance's prototype chain never includes `EncryptedPDFError.prototype`. Confirmed directly against the installed package: `new EncryptedPDFError() instanceof EncryptedPDFError` evaluates to `false`. The compress upload route therefore detects encryption via `err.message.includes('is encrypted')` instead of `instanceof`. This applies to any future code that needs to distinguish pdf-lib's typed errors from a generic load failure.
+
+*Last updated: 2026-07-01 — Session 019 (Compress API)*

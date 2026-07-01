@@ -20,13 +20,13 @@ Allow a user to upload a single PDF and a compression level (Low / Recommended /
 | Session | Title | Status |
 |---|---|---|
 | 018 | Planning, ADR-006 & Acceptance Criteria | COMPLETE ✅ |
-| 019 | Compress API (`POST /api/compress/jobs`, validation) | Not started |
+| 019 | Compress API (`POST /api/compress/jobs`, validation) | COMPLETE ✅ |
 | 020 | Worker: pdf-lib Image Extraction + Sharp Recompression Processor | Not started |
 | 021 | Frontend: `/compress` Upload, Level Selector, Polling & Download UI | Not started |
 | 022 | E2E Tests, Polish & Definition of Done | Not started |
 
 ### Acceptance Criteria
-40 criteria defined — see `wiki/active-feature.md`. None yet verified (implementation not started).
+40 criteria defined — see `wiki/active-feature.md`. API-side criteria verified this session: AC-21, AC-25 through AC-35 (12 of 40). AC-20's backend half (`400 UNSUPPORTED_ENCRYPTED_PDF`) is verified; its UI-banner half awaits Session 021. Remaining criteria depend on the worker and frontend (Sessions 020–022).
 
 ### Blocked Items
 None. One implementation risk flagged for Session 020: the exact low-level pdf-lib API for mutating image XObject streams needs a short spike before the full processor is written (see ADR-006 and `wiki/active-feature.md` Worker Specification).
@@ -137,4 +137,4 @@ None.
 
 ---
 
-*Last updated: 2026-07-01 — Session 018 (PDF Compress Planning)*
+*Last updated: 2026-07-01 — Session 019 (Compress API)*
