@@ -7,8 +7,9 @@
 
 ## Current Feature: PDF Compress
 
-**Status:** IN PROGRESS
+**Status:** COMPLETE ✅
 **Started:** 2026-07-01
+**Completed:** 2026-07-01
 **Branch:** `feature/pdf-compress`
 **Sessions:** 018 (planning) → 019–022 (implementation)
 
@@ -369,11 +370,11 @@ The feature is Done when **all** of the following are verified:
 
 ### Quality
 
-- [ ] AC-36: `npm run typecheck` exits with 0 errors
-- [ ] AC-37: `npm run lint` exits with 0 errors/warnings
-- [ ] AC-38: `npm run test` passes all unit and integration tests
-- [ ] AC-39: Playwright E2E test passes: upload an image-containing PDF at each level → download → verify output is smaller than input and page count/order is preserved
-- [ ] AC-40: No authentication required for any of the above flows
+- [x] AC-36: `npm run typecheck` exits with 0 errors
+- [x] AC-37: `npm run lint` exits with 0 errors/warnings
+- [x] AC-38: `npm run test` passes all unit and integration tests
+- [x] AC-39: Playwright E2E test passes: upload an image-containing PDF at each level → download → verify output is smaller than input and page count/order is preserved
+- [x] AC-40: No authentication required for any of the above flows
 
 ---
 
@@ -399,7 +400,16 @@ No open questions remain that block implementation, aside from the pdf-lib low-l
 | 019 | Compress API (`POST /api/compress/jobs`, validation) | COMPLETE ✅ |
 | 020 | Worker: pdf-lib Image Extraction + Sharp Recompression Processor | COMPLETE ✅ |
 | 021 | Frontend: `/compress` Upload, Level Selector, Polling & Download UI | COMPLETE ✅ |
-| 022 | E2E Tests, Polish & Definition of Done | Not started |
+| 022 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
+
+---
+
+## Implementation Notes (Session 022)
+
+- Parametrized the Session 021 full-flow E2E test (previously Recommended-only) over all three levels to satisfy AC-39 — same fixture, same assertions, level selection driven by the `role="radiogroup"` interaction already covered by the separate level-selector test.
+- Full Definition of Done checklist run against the live local stack (native Postgres/Redis/MinIO per ADR-004, MinIO started via the standalone binary command documented in ADR-004, `next dev`, worker `npm run dev`): typecheck 0 errors, lint 0 warnings, 104/104 unit tests, 11/11 Playwright E2E (including the pre-existing Merge/Split suites — no regressions).
+- AC-40 confirmed by inspection: no auth-related code exists in `apps/web/app/api/compress/**`, matching Merge/Split's anonymous `jobId`-as-access-token model.
+- No new risks or open questions. PDF Compress is feature-complete; `TASKS.md` Current Feature is cleared pending explicit approval of the next feature.
 
 ---
 

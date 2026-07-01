@@ -12,6 +12,7 @@
 | 0 | Project Initialization & Engineering Foundation | 2026-06-30 | v0.0.1 | Docs, stack decisions, process. No app code. |
 | 1 | PDF Merge | 2026-06-30 | v0.1.0 | Full upload → worker → download pipeline; 36 ACs verified; 25 unit tests + 1 Playwright E2E test. |
 | 2 | PDF Split | 2026-07-01 | v0.2.0 | Custom page-range split, ZIP archive output; 38 ACs verified; 75 unit tests + 4 Playwright E2E tests. |
+| 3 | PDF Compress | 2026-07-01 | v0.3.0 | pdf-lib + Sharp image recompression, 3 levels (Low/Recommended/High); 40 ACs verified; 104 unit tests + 11 Playwright E2E tests. |
 
 ---
 
@@ -111,4 +112,37 @@ Users can upload a single PDF and a comma-separated list of custom page ranges (
 
 ---
 
-*Last updated: 2026-07-01 — Session 015 (PDF Split Complete)*
+### Feature 3: PDF Compress
+**Completed:** 2026-07-01
+**Version:** v0.3.0
+**Branch:** feature/pdf-compress
+
+#### What Was Built
+Users can upload a single PDF and choose a compression level (Low / Recommended / High) through a browser interface; the server recompresses in-scope embedded raster images via Sharp and optimizes the PDF's object structure via pdf-lib, then the smaller output PDF can be downloaded — no authentication required. Reuses the full Merge/Split pipeline (upload API → BullMQ queue → worker → MinIO storage → polling frontend) with one new dependency (`sharp`, worker-only, ADR-006).
+
+#### Key Decisions
+- Three fixed compression-level presets rather than an open-ended quality slider — matches category convention, avoids unnecessary UI/API complexity (ADR-006)
+- Image recompression scoped to RGB/Grayscale JPEG (`DCTDecode`) and raw/Flate bitmap (`FlateDecode`) XObjects in v1; CMYK, Indexed-color, JPEG2000, and CCITT fax images are left untouched and explicitly documented as out of scope rather than silently skipped
+- DPI-based downsampling computed against each image's actual placed size on the page (via a hand-rolled content-stream CTM tracker), not raw pixel dimensions — correctly handles rotated/reused placements
+- Every recompression result is compared against the original and discarded if not smaller, so pathological inputs can never make the output larger
+- Encrypted/password-protected PDFs rejected at upload with an explicit `400 UNSUPPORTED_ENCRYPTED_PDF` — foreseeable input for a compress tool
+
+#### Tests Added
+- 104 Vitest unit/integration tests across the monorepo (16 worker, 88 web), including 7 for `compress/validation.ts` and 8 for the upload API's compression-level/encrypted-PDF error paths
+- `apps/worker/src/jobs/compress.test.ts` — 7 tests using real pdf-lib/Sharp against generated fixtures (JPEG recompression smaller at every level, grayscale FlateDecode preserving `/DeviceGray`, text-only PDF still completing, CMYK image left untouched, FAILED paths)
+- 11 Playwright E2E tests (`apps/web/e2e/compress.spec.ts`): full upload → process → download flow verified at **each** of the three compression levels (output smaller than input, page count/order/dimensions preserved), level-selector interaction, `UNSUPPORTED_ENCRYPTED_PDF` error-banner path, network-failure-during-upload path, and a seeded post-queue FAILED job driving the ERROR state
+
+#### Known Limitations
+- Same as Merge/Split: no TTL cleanup worker, no rate limiting, fixed worker concurrency
+- Images only reachable via a nested Form XObject are not walked in v1 and fall back to quality-only JPEG re-encoding rather than a computed resize target
+- No compression-ratio/size-reduction display in the UI — deferred as it would require new status-response fields no other feature needs yet (YAGNI)
+
+#### Lessons Learned
+- pdf-lib 1.17.1's `EncryptedPDFError` fails `instanceof` checks due to an ES5-targeted build issue (its `super()` call returns a fresh plain `Error`, discarding the subclass prototype) — detection had to fall back to matching on `err.message`
+- pdf-lib has no public API for reading a page's drawing operators; resolving an image's true on-page placed size (needed for correct DPI-based downsampling) required a minimal hand-rolled tokenizer tracking `q`/`Q`/`cm`/`Do` through the content stream
+- Sharp's JPEG encoder defaults to sRGB output regardless of input channel count — grayscale sources need an explicit `.toColourspace('b-w')` to avoid silently becoming 3-channel
+- A proof-of-concept spike at the start of the worker-processor session (before committing to the full implementation) resolved the exact low-level pdf-lib API for stream mutation (`context.assign(ref, PDFRawStream.of(...))`) — same pattern used elsewhere in this project for high-uncertainty implementation risks, and worth continuing to reach for whenever a session starts with a named unresolved API question in `TASKS.md`
+
+---
+
+*Last updated: 2026-07-01 — Session 022 (PDF Compress Complete)*

@@ -9,7 +9,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.3.0] — 2026-07-01
 
-### Added (PDF Compress — In Progress)
+### Added (PDF Compress)
+
+**Session 022 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/compress.spec.ts` — parametrized the full compress-and-download flow test over all three compression levels (Low/Recommended/High), each verifying downloaded output is smaller than the input with page count/order/dimensions preserved (AC-39); previously only Recommended had full download-flow coverage
+- Ran full Definition of Done checklist: `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (104/104 — 88 web + 16 worker), `npx playwright test` (11/11 against the live local stack — native Postgres/Redis/MinIO per ADR-004, `next dev`, worker `npm run dev`)
+- Confirmed AC-40: no authentication logic exists anywhere in the `/api/compress/*` routes, consistent with Merge/Split
+- All 40 acceptance criteria now verified — PDF Compress is feature-complete
+- `TASKS.md`, `wiki/active-feature.md`, `wiki/completed-features.md` updated to mark the feature Done; Current Feature reset to none pending explicit approval for the next feature (per the One-Feature-at-a-Time Rule)
 
 **Session 021 — Frontend: `/compress` Upload, Level Selector, Polling & Download UI (2026-07-01)**
 - `apps/web/app/compress/page.tsx` — the `/compress` route: IDLE → UPLOADING → PROCESSING → DONE/ERROR state machine, modeled directly on `apps/web/app/split/page.tsx`'s dropzone/polling/download pattern

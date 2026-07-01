@@ -68,49 +68,64 @@ test.afterAll(async () => {
   await prisma.$disconnect()
 })
 
-test('full compress flow at Recommended level: upload → process → download smaller PDF with pages preserved', async ({ page }) => {
-  await page.goto('/compress')
+// AC-39: full upload → process → download flow verified at every compression level.
+const LEVELS: { label: string; isDefault: boolean }[] = [
+  { label: 'Low', isDefault: false },
+  { label: 'Recommended', isDefault: true },
+  { label: 'High', isDefault: false },
+]
 
-  // Upload via react-dropzone's hidden file input
-  await page.locator('input[type="file"]').setInputFiles(pdfPath)
-  await expect(page.getByText('sample.pdf')).toBeVisible()
+for (const { label, isDefault } of LEVELS) {
+  test(`full compress flow at ${label} level: upload → process → download smaller PDF with pages preserved`, async ({ page }) => {
+    await page.goto('/compress')
 
-  // Recommended is selected by default (AC-05)
-  await expect(page.getByRole('radio', { name: /Recommended/ })).toHaveAttribute('aria-checked', 'true')
+    // Upload via react-dropzone's hidden file input
+    await page.locator('input[type="file"]').setInputFiles(pdfPath)
+    await expect(page.getByText('sample.pdf')).toBeVisible()
 
-  const compressButton = page.getByRole('button', { name: 'Compress PDF' })
-  await expect(compressButton).toBeEnabled()
-  await compressButton.click()
+    const levelOption = page.getByRole('radio', { name: new RegExp(label) })
+    if (isDefault) {
+      // Recommended is selected by default (AC-05) — no click needed
+      await expect(levelOption).toHaveAttribute('aria-checked', 'true')
+    } else {
+      await levelOption.click()
+      await expect(levelOption).toHaveAttribute('aria-checked', 'true')
+    }
 
-  // PROCESSING state
-  await expect(page.getByText('Compressing your file…')).toBeVisible({ timeout: 10_000 })
+    const compressButton = page.getByRole('button', { name: 'Compress PDF' })
+    await expect(compressButton).toBeEnabled()
+    await compressButton.click()
 
-  // DONE state — allow time for the worker to process and polling to catch it
-  await expect(page.getByText('Your PDF has been compressed successfully')).toBeVisible({
-    timeout: 60_000,
+    // PROCESSING state
+    await expect(page.getByText('Compressing your file…')).toBeVisible({ timeout: 10_000 })
+
+    // DONE state — allow time for the worker to process and polling to catch it
+    await expect(page.getByText('Your PDF has been compressed successfully')).toBeVisible({
+      timeout: 60_000,
+    })
+
+    // Capture the download before clicking so the event is not missed
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download PDF' }).click()
+    const download = await downloadPromise
+
+    const downloadedPath = await download.path()
+    expect(downloadedPath).not.toBeNull()
+    const buffer = await fs.readFile(downloadedPath!)
+
+    expect(buffer.subarray(0, 4).toString('ascii')).toBe('%PDF')
+    expect(buffer.byteLength).toBeLessThan(originalSize)
+
+    const downloadedDoc = await PDFDocument.load(buffer)
+    expect(downloadedDoc.getPageCount()).toBe(3)
+    expect(downloadedDoc.getPage(0).getSize()).toEqual({ width: 450, height: 350 })
+    expect(downloadedDoc.getPage(1).getSize()).toEqual({ width: 300, height: 300 })
+
+    // "Compress another PDF" must reset to IDLE without a page refresh
+    await page.getByRole('button', { name: 'Compress another PDF' }).click()
+    await expect(page.getByText('Drag a PDF file here or click to browse')).toBeVisible()
   })
-
-  // Capture the download before clicking so the event is not missed
-  const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Download PDF' }).click()
-  const download = await downloadPromise
-
-  const downloadedPath = await download.path()
-  expect(downloadedPath).not.toBeNull()
-  const buffer = await fs.readFile(downloadedPath!)
-
-  expect(buffer.subarray(0, 4).toString('ascii')).toBe('%PDF')
-  expect(buffer.byteLength).toBeLessThan(originalSize)
-
-  const downloadedDoc = await PDFDocument.load(buffer)
-  expect(downloadedDoc.getPageCount()).toBe(3)
-  expect(downloadedDoc.getPage(0).getSize()).toEqual({ width: 450, height: 350 })
-  expect(downloadedDoc.getPage(1).getSize()).toEqual({ width: 300, height: 300 })
-
-  // "Compress another PDF" must reset to IDLE without a page refresh
-  await page.getByRole('button', { name: 'Compress another PDF' }).click()
-  await expect(page.getByText('Drag a PDF file here or click to browse')).toBeVisible()
-})
+}
 
 test('user can select the High compression level (AC-05)', async ({ page }) => {
   await page.goto('/compress')
