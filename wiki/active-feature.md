@@ -322,36 +322,36 @@ The feature is Done when **all** of the following are verified:
 
 ### Upload
 
-- [ ] AC-01: User can drag-and-drop a PDF file onto the dropzone and see it selected
-- [ ] AC-02: User can click the dropzone to open a file browser and select a PDF
-- [ ] AC-03: Selected file shows its filename and formatted size
-- [ ] AC-04: User can remove the selected file via the remove button
-- [ ] AC-05: User can select a compression level (Low / Recommended / High); Recommended is selected by default
-- [ ] AC-06: Compress button is disabled when no file is selected
-- [ ] AC-07: Compress button is enabled once a valid file is selected (any level, since one is always selected by default)
-- [ ] AC-08: Dragging a non-PDF file onto the dropzone shows an error and rejects the file
-- [ ] AC-09: Selecting a file over 50MB shows an error and rejects the file
+- [x] AC-01: User can drag-and-drop a PDF file onto the dropzone and see it selected
+- [x] AC-02: User can click the dropzone to open a file browser and select a PDF
+- [x] AC-03: Selected file shows its filename and formatted size
+- [x] AC-04: User can remove the selected file via the remove button
+- [x] AC-05: User can select a compression level (Low / Recommended / High); Recommended is selected by default
+- [x] AC-06: Compress button is disabled when no file is selected
+- [x] AC-07: Compress button is enabled once a valid file is selected (any level, since one is always selected by default)
+- [x] AC-08: Dragging a non-PDF file onto the dropzone shows an error and rejects the file
+- [x] AC-09: Selecting a file over 50MB shows an error and rejects the file
 
 ### Processing & Download
 
-- [ ] AC-10: Clicking Compress submits the file and level to `POST /api/compress/jobs` and receives a `jobId`
-- [ ] AC-11: After submission, the page shows a "Compressing…" processing state
-- [ ] AC-12: The processing state polls the status endpoint every 2 seconds
-- [ ] AC-13: When the job completes, the page transitions to the DONE state
-- [ ] AC-14: The DONE state shows a Download PDF button
-- [ ] AC-15: Clicking Download triggers a browser file download of a `.pdf` file
+- [x] AC-10: Clicking Compress submits the file and level to `POST /api/compress/jobs` and receives a `jobId`
+- [x] AC-11: After submission, the page shows a "Compressing…" processing state
+- [x] AC-12: The processing state polls the status endpoint every 2 seconds
+- [x] AC-13: When the job completes, the page transitions to the DONE state
+- [x] AC-14: The DONE state shows a Download PDF button
+- [x] AC-15: Clicking Download triggers a browser file download of a `.pdf` file
 - [x] AC-16: The downloaded PDF opens and renders correctly (valid PDF, not corrupted) and contains the same page count and page order as the input
 - [x] AC-17: For a PDF containing in-scope images (RGB/Grayscale JPEG), the compressed output is measurably smaller than the input at every level
 - [x] AC-18: For a PDF containing no compressible content (pure text/vector), the job still completes successfully (COMPLETED, not FAILED)
-- [ ] AC-19: "Compress another PDF" resets the page to IDLE without a page refresh
+- [x] AC-19: "Compress another PDF" resets the page to IDLE without a page refresh
 
 ### Error Handling
 
-- [ ] AC-20: Submitting an encrypted/password-protected PDF returns `400 UNSUPPORTED_ENCRYPTED_PDF` and the UI shows an error banner without losing the selected file
+- [x] AC-20: Submitting an encrypted/password-protected PDF returns `400 UNSUPPORTED_ENCRYPTED_PDF` and the UI shows an error banner without losing the selected file
 - [x] AC-21: Submitting an invalid `level` value returns `400 INVALID_COMPRESSION_LEVEL`
-- [ ] AC-22: If the compress job fails after being queued, the page shows the ERROR state
-- [ ] AC-23: The ERROR state shows a "Try again" button that resets to IDLE
-- [ ] AC-24: A network error during upload shows an error banner and keeps the selected file intact
+- [x] AC-22: If the compress job fails after being queued, the page shows the ERROR state
+- [x] AC-23: The ERROR state shows a "Try again" button that resets to IDLE
+- [x] AC-24: A network error during upload shows an error banner and keeps the selected file intact
 
 ### API
 
@@ -398,8 +398,34 @@ No open questions remain that block implementation, aside from the pdf-lib low-l
 | 018 | Planning, ADR-006 & Acceptance Criteria | COMPLETE ✅ |
 | 019 | Compress API (`POST /api/compress/jobs`, validation) | COMPLETE ✅ |
 | 020 | Worker: pdf-lib Image Extraction + Sharp Recompression Processor | COMPLETE ✅ |
-| 021 | Frontend: `/compress` Upload, Level Selector, Polling & Download UI | Not started |
+| 021 | Frontend: `/compress` Upload, Level Selector, Polling & Download UI | COMPLETE ✅ |
 | 022 | E2E Tests, Polish & Definition of Done | Not started |
+
+---
+
+## Implementation Notes (Session 021)
+
+**No new pdf-lib/Sharp risk — this session was UI-only.** `apps/web/app/compress/page.tsx` is modeled directly on `apps/web/app/split/page.tsx`'s state machine (IDLE/UPLOADING/PROCESSING/DONE/ERROR), swapping the ranges text input for a three-option level `radiogroup` (Low/Recommended/High, `RECOMMENDED` default). No new abstraction was introduced for the level selector since Merge/Split/Compress only ever needed one instance each of their respective per-feature input.
+
+**`UNSUPPORTED_ENCRYPTED_PDF` needed no special-case UI branch.** The upload handler's existing generic catch-and-banner logic (used by Split for its `RANGE_OUT_OF_BOUNDS` error) already surfaces any 4xx/5xx `message` field from the API in the same red alert banner, without losing the selected file. AC-20's UI half falls out of the existing pattern for free.
+
+**Building a real encrypted PDF fixture for a Playwright E2E test isn't practical with this stack's dependencies** — pdf-lib can load unencrypted PDFs only, and adding a PDF-encryption library just for one test fixture would be scope creep. `apps/web/e2e/compress.spec.ts` instead uses `page.route()` to make the real API call return the exact `400 UNSUPPORTED_ENCRYPTED_PDF` shape (already covered server-side by Session 019's mocked-`PDFDocument.load` unit test), and asserts on the client's real handling of that response. Same technique Split's own e2e suite already used for its seeded-FAILED-job test.
+
+**The E2E image fixture is built by hand via pdf-lib's low-level API, not `sharp`.** `sharp` is a worker-only dependency per ADR-006's scope decision; adding it to `apps/web` just to synthesize a JPEG for a test fixture would violate that boundary. Instead, `buildFixturePdf()` in `compress.spec.ts` constructs a genuine `/DeviceRGB` + `/FlateDecode` raw-bitmap image XObject directly via `pdfDoc.context.flateStream()`/`context.register()`, mirroring the same by-hand technique `compress.test.ts` already uses for its `/DeviceGray` fixture (see Session 020 notes above). This is real v1-in-scope image data — the worker's actual Sharp recompression runs against it for real during the e2e test, nothing about the compression pipeline itself is mocked.
+
+**A real browser network failure doesn't produce the catch block's generic fallback message.** `fetch()` throws `TypeError: Failed to fetch` on a network-level failure, which passes the `err instanceof Error` check, so the banner shows that message rather than the catch block's `'Network error. Please check your connection.'` fallback (which is only ever reached for a thrown non-`Error` value, effectively dead code for real network failures). AC-24 is still satisfied — an error banner appears and the file is retained — the E2E test asserts on the alert text Chromium actually throws rather than the fallback string.
+
+### Tests
+
+7 new unit tests in `apps/web/app/compress/validation.test.ts` (same shape as Split's), plus 5 new Playwright E2E tests in `apps/web/e2e/compress.spec.ts`: full compress-and-download flow at Recommended (page count, page sizes, and output-smaller-than-input all verified), level-selector interaction (AC-05), the `UNSUPPORTED_ENCRYPTED_PDF` banner path (AC-20), a network-failure-during-upload path (AC-24), and a seeded post-queue FAILED job driving the real ERROR state (AC-22/23).
+
+### Manual Verification
+
+Started the real local stack (native Postgres/Redis/MinIO, `next dev`, worker `npm run dev`). Ran the full Playwright suite (`merge.spec.ts` + `split.spec.ts` + `compress.spec.ts`, 9 tests) against it twice — all green, no regressions in the pre-existing Merge/Split flows. Took a direct screenshot of `/compress` in its IDLE state confirming the dropzone, level selector (Recommended pre-selected per AC-05), and disabled-until-file-selected Compress button all render correctly.
+
+### Quality Gates
+
+`npm run typecheck`, `npm run lint`, `npm run test` all green across the whole monorepo — 0 typecheck errors, 0 lint warnings, 88/88 web unit tests + 16/16 worker unit tests passing.
 
 ---
 
@@ -439,4 +465,4 @@ All three downloaded PDFs opened correctly via `pdfinfo`/`pdftoppm` with the cor
 
 **pdf-lib `EncryptedPDFError` cannot be detected via `instanceof`.** pdf-lib 1.17.1's ES5-targeted build extends the native `Error` class using a `tslib` `__extends` helper; its `super.call(this, msg)` invokes `Error` as a plain function, which returns a brand-new `Error` object rather than initializing `this` — so the resulting instance's prototype chain never includes `EncryptedPDFError.prototype`. Confirmed directly against the installed package: `new EncryptedPDFError() instanceof EncryptedPDFError` evaluates to `false`. The compress upload route therefore detects encryption via `err.message.includes('is encrypted')` instead of `instanceof`. This applies to any future code that needs to distinguish pdf-lib's typed errors from a generic load failure.
 
-*Last updated: 2026-07-01 — Session 020 (Worker: Image Recompression Processor)*
+*Last updated: 2026-07-01 — Session 021 (Frontend: Compress Upload UI)*
