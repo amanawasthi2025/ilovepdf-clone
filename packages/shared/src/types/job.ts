@@ -9,12 +9,18 @@ export enum JobType {
   MERGE = 'MERGE',
   SPLIT = 'SPLIT',
   COMPRESS = 'COMPRESS',
+  PDF_TO_IMAGE = 'PDF_TO_IMAGE',
 }
 
 export enum CompressionLevel {
   LOW = 'LOW',
   RECOMMENDED = 'RECOMMENDED',
   HIGH = 'HIGH',
+}
+
+export enum ImageFormat {
+  PNG = 'PNG',
+  JPEG = 'JPEG',
 }
 
 export interface MergeJobPayload {
@@ -32,4 +38,10 @@ export interface CompressJobPayload {
   jobId: string
   inputKey: string
   level: CompressionLevel
+}
+
+export interface PdfToImageJobPayload {
+  jobId: string
+  inputKey: string
+  format: ImageFormat
 }

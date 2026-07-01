@@ -1,6 +1,6 @@
 # ADR-009: PDF to Image — Rasterization Library Choice
 
-**Status:** Accepted
+**Status:** Accepted (amended 2026-07-01, Session 032 — see Addendum; original Decision below is superseded)
 **Date:** 2026-07-01
 **Author:** Claude Code Session 031
 
@@ -118,3 +118,41 @@ Sharp is already a vetted dependency in this codebase (ADR-006), its prebuilt bi
 - ADR-006 (`006-sharp-image-recompression.md`) — establishes Sharp as a vetted worker dependency; this ADR extends its use from image re-encoding to PDF page rasterization
 - `wiki/architecture.md` — documents `pdf-lib`'s lack of rasterization support and reserves LibreOffice Headless (a comparable system-dependency trade-off) for future Word conversion work
 - Sharp's official installation documentation — confirms PDFium is bundled in the official prebuilt binaries, not a separately-installed system package
+
+---
+
+## Addendum — Session 032 Correction (2026-07-01)
+
+**The Decision above does not hold: Sharp's npm-distributed prebuilt binaries have no PDF support at all**, contradicting this ADR's Context section. Verified directly in this repo's actual installed dependency (`sharp@0.33.5` / `@img/sharp-libvips-linux-x64`), before writing any worker code against it:
+
+```
+> sharp.format.pdf
+{ id: 'pdf', input: { file: false, buffer: false, stream: false }, output: { file: false, buffer: false, stream: false } }
+```
+
+Calling `sharp(pdfBuffer, { pages: -1 })` throws `Input buffer contains unsupported image format`. `sharp.versions` lists `cairo` and `rsvg` but no `poppler` or `pdfium` — the codec Sharp's PDF loader actually needs. Sharp's own documentation (not fully checked before the original Decision was written — this was an unverified claim, not a confirmed one, despite what the Context section asserted) states PDF support requires a **globally-installed libvips compiled with PDFium/poppler-glib**, which is never part of the npm-published prebuilt binaries. This is a factual error in this ADR's original research, discovered only once Session 032 actually ran Sharp against a generated PDF fixture.
+
+**Consequence:** Option 1 as specced cannot rasterize a single page in this project's actual dependency environment without adding a system-level libvips build — precisely the category of cost this ADR rejected Option 3 (`poppler-utils`) for. Option 1's chief advantage ("zero new system dependencies") does not exist.
+
+**Corrected Decision: Option 2 — `pdfjs-dist` + `@napi-rs/canvas`.**
+
+Rather than the originally-rejected `node-canvas` (a native-compiled package with its own well-known system build-dependency headaches — Cairo/Pango dev headers), `@napi-rs/canvas` is used: a prebuilt-binary, N-API canvas implementation with the same `createCanvas()`/`CanvasRenderingContext2D` surface pdfjs-dist's Node rendering path expects, requiring no system packages. Verified directly in this repo before adopting:
+
+```js
+const { createCanvas } = require('@napi-rs/canvas')
+const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+const doc = await pdfjsLib.getDocument({ data: pdfBytes }).promise
+const page = await doc.getPage(1)
+const viewport = page.getViewport({ scale: 150 / 72 })
+const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
+await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
+canvas.toBuffer('image/png') // or 'image/jpeg'
+```
+
+This rendered a real `pdf-lib`-generated multi-page fixture correctly on the first attempt, with no worker/canvas-factory shimming required — pdfjs-dist's `legacy/build/pdf.mjs` entry point auto-detects Node and runs its rendering pipeline in-process.
+
+**New dependencies added to `apps/worker`:** `pdfjs-dist@^4.10.38`, `@napi-rs/canvas@^0.1.100`. Both are pure npm installs with prebuilt native binaries for the target platform — no system package manager step, no Dockerfile/deploy-target change, consistent with this ADR's original goal (just achieved via a different library than originally chosen).
+
+**What stays the same from the original Decision:** fixed 150 DPI (translated to canvas `scale = density / 72`), always-ZIP packaging via `JSZip`, one entry per page — none of that depended on which rasterization library was used.
+
+**Docs updated accordingly:** `wiki/active-feature.md`'s rasterization-library reference and `apps/worker/src/jobs/pdf-to-image.ts`'s implementation. Alternatives-Rejected framing for Option 2 above ("two new dependencies and real Node/DOM integration complexity") is superseded by this Addendum — in practice, the integration complexity did not materialize with `@napi-rs/canvas`, and "two new dependencies" is an acceptable cost given Option 1 does not work at all in this environment.

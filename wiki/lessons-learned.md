@@ -94,6 +94,12 @@ Add entries after completing a feature, resolving a production issue, or a notab
 **Lesson:** A "read-only" library operation (here: figuring out an image's on-page size) can require reimplementing a sliver of the format's execution model when the library only exposes structure, not semantics. Before writing that code, check whether the scope can be narrowed (this implementation explicitly did not walk into nested Form XObjects, falling back to quality-only recompression there) rather than building a general-purpose interpreter for a v1.
 **Applies to:** architecture, performance
 
+### 2026-07-01 — An ADR's factual claim about a dependency's capability was never actually verified, and it was wrong
+**Context:** PDF to Image Session 031 (planning) → Session 032 (implementation). ADR-009 chose Sharp for PDF rasterization on the stated grounds that "PDFium ships in Sharp's official prebuilt binaries."
+**What happened:** That claim was false for this project's actual installed dependency. `sharp@0.33.5`'s `sharp.format.pdf.input.buffer` is `false`, and calling `sharp(pdfBuffer, ...)` throws `Input buffer contains unsupported image format` — confirmed only when Session 032 actually ran Sharp against a generated PDF fixture, the first time anyone had done so. Sharp's real PDF support requires a globally-installed libvips compiled with PDFium/poppler, which is never part of the npm-published prebuilt binaries — exactly the system-dependency cost ADR-009 had rejected `poppler-utils` for. The ADR's Context section stated this had been "confirmed against Sharp's own installation documentation before making this decision, not assumed" — but it hadn't actually been run against real input.
+**Lesson:** A claim like "library X supports capability Y out of the box" is a testable hypothesis, not a fact to accept from documentation or general familiarity — run the actual installed dependency against real input before an ADR locks in a decision built on that claim, especially for a capability (rendering/rasterization) qualitatively different from what's already been used successfully (structural PDF manipulation, image re-encoding). When the premise turns out wrong mid-implementation, stop and put the corrected trade-off to the user rather than silently swapping libraries — this surfaced three real options (accept the system dependency, switch libraries, or pause to re-plan) that only the user could weigh. The switch to `pdfjs-dist` + `@napi-rs/canvas` (Option 2, previously rejected) was itself verified working against a real fixture — including its `standardFontDataUrl` requirement, whose omission silently produces blank pages — before any processor code was written against it.
+**Applies to:** architecture, testing
+
 ---
 
 ## Categories to Watch
@@ -127,4 +133,4 @@ The following categories commonly produce learnable moments in document-processi
 
 ---
 
-*Last updated: 2026-07-01 — Session 029 (Job History: `/history` page, nav link, auth session.user.id fix)*
+*Last updated: 2026-07-01 — Session 032 (PDF to Image: schema + worker processor + API routes, ADR-009 rasterization library correction)*

@@ -19,12 +19,12 @@ Allow a user to upload a single PDF, choose PNG or JPEG output, and download a Z
 | Session | Title | Status |
 |---|---|---|
 | 031 | Planning, ADR-009 & Acceptance Criteria | COMPLETE ✅ |
-| 032 | Schema + Worker Processor + API Routes | Not started |
+| 032 | Schema + Worker Processor + API Routes | COMPLETE ✅ |
 | 033 | Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix | Not started |
 | 034 | E2E Tests, Polish & Definition of Done | Not started |
 
 ### Acceptance Criteria
-23 criteria defined — see `wiki/active-feature.md`. None yet verified (planning session only).
+23 criteria defined — see `wiki/active-feature.md`. AC-01 through AC-11 (upload, processing, ownership) verified this session via unit/integration tests. AC-12–23 (history integration, frontend, quality gates, E2E) remain for Sessions 033–034.
 
 ### Blocked Items
 None.
@@ -194,4 +194,4 @@ None.
 
 ---
 
-*Last updated: 2026-07-01 — Session 031 (PDF to Image: Planning, ADR-009 & Acceptance Criteria)*
+*Last updated: 2026-07-01 — Session 032 (PDF to Image: Schema + Worker Processor + API Routes)*
