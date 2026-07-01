@@ -11,6 +11,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (Image to PDF)
 
+**Session 037 — Frontend: `/image-to-pdf` page + home page card (2026-07-01)**
+- `apps/web/app/image-to-pdf/page.tsx` + `validation.ts` (+ `validation.test.ts`) — new tool page mirroring `/merge`'s structure (the closer analog — no format/level selector, just files), but deliberately omitting `/merge`'s `@dnd-kit` drag-to-reorder feature: the locked scope decision is upload order only, no reordering UI. Multi-file dropzone (1–10 PNG/JPEG images), a simple numbered file list with per-row remove (no drag handle, no up/down buttons), IDLE → UPLOADING → PROCESSING → DONE/ERROR flow with 2s status polling, single-PDF download on completion (not a ZIP, matching Merge's output shape).
+- `apps/web/app/page.tsx` — added a fifth tool card (`Image to PDF` → `/image-to-pdf`) to the existing four; `page.test.tsx` updated to assert all five tool links.
+- No shared upload/dropzone/polling component was introduced — confirmed via research that Merge/Split/Compress/PDF to Image each independently duplicate this pattern already (no `apps/web/components/` precedent beyond `nav.tsx`), so a new abstraction here would be the first of its kind against an established one-off convention, not filling a gap (YAGNI).
+- No page-level test file added for `image-to-pdf/page.tsx` itself, matching the existing convention — no other tool page has one; only `validation.ts` gets unit tests, and the upload flow is covered by Playwright E2E (Session 038).
+- Manually verified end-to-end against the real local stack (native Postgres/Redis/MinIO already running, `next dev` + worker started fresh) using a Playwright driver script: home page → Image to PDF card → uploaded a 300×200 PNG and a 150×450 JPEG through the actual file input → converted → downloaded → confirmed via `pdf-lib` the resulting PDF has exactly 2 pages, in upload order, each page's dimensions exactly matching its source image. Separately verified an invalid file type (`.txt`) is rejected with a clear inline error and no crash (AC-16).
+- 9 new unit tests (`validation.test.ts`) + `page.test.tsx` updated with a 5th assertion (all previously counted in Session 036's totals where applicable; net new this session is `image-to-pdf/validation.test.ts`).
+- `npm run typecheck` (0 errors), `npm run lint` (0 errors/warnings), `npm run test` (249 total — 222 web + 27 worker, all passing, no regressions).
+- Covers AC-15–AC-17 (frontend) and confirms AC-19–AC-22 (regression suite + quality gates) of the Image to PDF spec; AC-23–AC-24 (Playwright E2E specs) remain for Session 038.
+
 **Session 036 — Schema + Worker Processor + API Routes (2026-07-01)**
 - `prisma/schema.prisma` — `JobType` gains `IMAGE_TO_PDF`. Migration `20260701124327_add_image_to_pdf_job_type` applied. No new columns (`inputKeys`/`outputKey` already fit, unlike PDF to Image's `imageFormat`).
 - `packages/shared` — `JobType.IMAGE_TO_PDF` and `ImageToPdfJobPayload` added and exported.

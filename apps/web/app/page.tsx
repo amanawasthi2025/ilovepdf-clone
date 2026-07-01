@@ -5,6 +5,7 @@ const TOOLS = [
   { href: '/split', name: 'Split PDF', description: 'Extract page ranges into a new PDF.' },
   { href: '/compress', name: 'Compress PDF', description: 'Reduce a PDF’s file size.' },
   { href: '/pdf-to-image', name: 'PDF to Image', description: 'Convert every page into PNG or JPEG images.' },
+  { href: '/image-to-pdf', name: 'Image to PDF', description: 'Combine PNG or JPEG images into a single PDF.' },
 ]
 
 export default function HomePage() {

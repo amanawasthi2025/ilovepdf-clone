@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import HomePage from './page'
 
 describe('HomePage', () => {
-  it('links to all four tools', () => {
+  it('links to all five tools', () => {
     render(<HomePage />)
 
     expect(screen.getByRole('link', { name: /merge pdf/i })).toHaveAttribute('href', '/merge')
@@ -12,6 +12,10 @@ describe('HomePage', () => {
     expect(screen.getByRole('link', { name: /pdf to image/i })).toHaveAttribute(
       'href',
       '/pdf-to-image',
+    )
+    expect(screen.getByRole('link', { name: /image to pdf/i })).toHaveAttribute(
+      'href',
+      '/image-to-pdf',
     )
   })
 })

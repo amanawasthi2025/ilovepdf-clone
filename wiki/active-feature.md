@@ -7,7 +7,7 @@
 
 ## Current Feature: Image to PDF
 
-**Status:** IN PROGRESS — Session 036 (Schema + Worker Processor + API Routes)
+**Status:** IN PROGRESS — Session 037 (Frontend: `/image-to-pdf` page + home page card)
 **Started:** 2026-07-01
 **Branch:** `feature/image-to-pdf`
 **Sessions:** 035 (planning) → 036 (schema + worker + API routes) → 037 (frontend) → 038 (E2E tests, polish, DoD)
@@ -148,9 +148,9 @@ Currently renders four tool cards (Merge/Split/Compress/PDF to Image, added Sess
 
 ### Frontend
 
-- [ ] AC-15: `/image-to-pdf` accepts 1–10 image uploads and completes the full IDLE → UPLOADING → PROCESSING → DONE flow with a working PDF download
-- [ ] AC-16: An unsupported/invalid file, or a file count outside 1–10, shows a clear inline error, without a page crash, same pattern as the other tool pages
-- [ ] AC-17: The home page links to `/image-to-pdf` alongside the existing four tools
+- [x] AC-15: `/image-to-pdf` accepts 1–10 image uploads and completes the full IDLE → UPLOADING → PROCESSING → DONE flow with a working PDF download
+- [x] AC-16: An unsupported/invalid file, or a file count outside 1–10, shows a clear inline error, without a page crash, same pattern as the other tool pages
+- [x] AC-17: The home page links to `/image-to-pdf` alongside the existing four tools
 
 ### Anonymous Use Unaffected
 
@@ -159,9 +159,9 @@ Currently renders four tool cards (Merge/Split/Compress/PDF to Image, added Sess
 
 ### Quality
 
-- [ ] AC-20: `npm run typecheck` exits with 0 errors
-- [ ] AC-21: `npm run lint` exits with 0 errors/warnings
-- [ ] AC-22: `npm run test` passes all unit and integration tests
+- [x] AC-20: `npm run typecheck` exits with 0 errors
+- [x] AC-21: `npm run lint` exits with 0 errors/warnings
+- [x] AC-22: `npm run test` passes all unit and integration tests
 - [ ] AC-23: Playwright E2E test passes: upload multiple images, download the resulting PDF, and verify it has the expected page count in the expected order
 - [ ] AC-24: Playwright E2E test passes: an `IMAGE_TO_PDF` job submitted while logged in appears in `/history` and its Download control succeeds
 
@@ -186,7 +186,7 @@ No open questions remain that block implementation.
 |---|---|---|
 | 035 | Planning, ADR-010 & Acceptance Criteria | COMPLETE ✅ |
 | 036 | Schema (`JobType.IMAGE_TO_PDF`) + Worker Processor + API Routes | COMPLETE ✅ |
-| 037 | Frontend: `/image-to-pdf` page + home page card | Not started |
+| 037 | Frontend: `/image-to-pdf` page + home page card | COMPLETE ✅ |
 | 038 | E2E Tests, Polish & Definition of Done | Not started |
 
 ---

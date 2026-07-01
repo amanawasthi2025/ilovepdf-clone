@@ -8,7 +8,7 @@
 ## Current Feature
 
 **Feature:** Image to PDF
-**Status:** IN PROGRESS — Session 036 (Schema + Worker Processor + API Routes)
+**Status:** IN PROGRESS — Session 037 (Frontend: `/image-to-pdf` page + home page card)
 **Branch:** `feature/image-to-pdf`
 **Spec:** `wiki/active-feature.md`
 
@@ -20,11 +20,11 @@ Allow a user to upload 1–10 PNG/JPEG images and download a single PDF with one
 |---|---|---|
 | 035 | Planning, ADR-010 & Acceptance Criteria | COMPLETE ✅ |
 | 036 | Schema + Worker Processor + API Routes | COMPLETE ✅ |
-| 037 | Frontend: `/image-to-pdf` page + home page card | Not started |
+| 037 | Frontend: `/image-to-pdf` page + home page card | COMPLETE ✅ |
 | 038 | E2E Tests, Polish & Definition of Done | Not started |
 
 ### Acceptance Criteria
-24 criteria drafted — see `wiki/active-feature.md`. AC-01–AC-14 and AC-18 verified this session; AC-15–AC-17 and AC-19–AC-24 remain.
+24 criteria drafted — see `wiki/active-feature.md`. AC-01–AC-18 verified; AC-19–AC-24 remain (AC-19 unit/integration already passing, AC-20–AC-22 quality gates already green, AC-23–AC-24 Playwright E2E specs remain for Session 038).
 
 ### Blocked Items
 None.
