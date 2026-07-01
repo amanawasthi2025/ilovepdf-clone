@@ -21,11 +21,11 @@ Allow a user to sign up with email/password, log in, and log out through a brows
 |---|---|---|
 | 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
 | 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | COMPLETE ✅ |
-| 025 | Frontend: `/signup`, `/login`, session-aware nav | Not started |
+| 025 | Frontend: `/signup`, `/login`, session-aware nav | COMPLETE ✅ |
 | 026 | E2E Tests, Polish & Definition of Done | Not started |
 
 ### Acceptance Criteria
-28 criteria defined — see `wiki/active-feature.md`. AC-03–AC-07, AC-09–AC-14, AC-23 verified this session (13 of 28) — AC-13/AC-17/AC-19 wording corrected for JWT sessions, see ADR-007 Addendum. Remaining criteria are frontend/E2E, covered by Sessions 025–026.
+28 criteria defined — see `wiki/active-feature.md`. AC-03–AC-07, AC-09–AC-14, AC-23 verified in Session 024; AC-01, AC-02, AC-08, AC-15–AC-22 verified this session via manual Playwright-driven browser testing (23 of 28). Remaining: AC-24–AC-28 (quality-gate re-verification + the two Playwright E2E specs), covered by Session 026.
 
 ### Blocked Items
 None.
@@ -141,4 +141,4 @@ None.
 
 ---
 
-*Last updated: 2026-07-01 — Session 024 (User Authentication: Schema + Signup/Login API, ADR-007 corrected to JWT sessions)*
+*Last updated: 2026-07-01 — Session 025 (User Authentication: Frontend — /signup, /login, session-aware nav)*

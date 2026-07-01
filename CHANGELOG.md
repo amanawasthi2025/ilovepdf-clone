@@ -11,6 +11,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (User Authentication — In Progress)
 
+**Session 025 — Frontend: `/signup`, `/login`, session-aware nav (2026-07-01)**
+- `apps/web/app/signup/page.tsx` + `validation.ts`/`.test.ts` — signup form; submit disabled until email (Zod `.email()`, mirrors the API) and password (8–72 chars) are valid; `201` → redirect to `/login?signup=success`; `409` → inline "email already exists" under the email field; other errors → generic banner; entered values survive a network failure
+- `apps/web/app/login/page.tsx` — login form using `next-auth/react`'s client `signIn('credentials', { redirect: false })`; generic "Invalid email or password" banner on failure (no field-specific detail, no user enumeration); shows the signup success message via a `?signup=success` query param
+- `apps/web/components/nav.tsx` (new `components/` directory) — `async` Server Component reading `auth()`, rendered from `app/layout.tsx` on every route; logged in shows email + a "Log out" control wired to a server action calling `signOut`; logged out shows "Log in"/"Sign up" links
+- **Bug found and fixed during manual verification:** `router.push('/')` after a successful client-side login left the nav showing the stale logged-out state (Next.js App Router client Router Cache reuses the previously rendered root layout across a soft navigation). Fixed by using a full navigation (`window.location.href = '/'`) for the post-login redirect instead — see `wiki/active-feature.md` Session 025 notes for the full root-cause writeup
+- 7 new unit tests (`app/signup/validation.test.ts`); manually verified the full signup → login → nav → reload → logout flow plus duplicate-email, wrong-password, and tampered-session-cookie (AC-19) cases via a scripted headless-browser session against a live local Postgres + `next dev`
+- `npm run typecheck`/`lint`/`test` all green (108/108 web + 16/16 worker)
+
 **Session 024 — Schema (User/Account/Session/VerificationToken) + Signup/Login API (2026-07-01)**
 - `prisma/schema.prisma` — added `User`, `Account`, `Session`, `VerificationToken` models per `@auth/prisma-adapter`'s required shape, plus `User.passwordHash`; migration `20260701093242_add_user_authentication`; `Job` untouched
 - **ADR-007 corrected (Addendum):** Auth.js rejects `session.strategy: 'database'` when Credentials is the only provider — discovered before implementation, flagged to the user, switched to `session.strategy: 'jwt'` (standard supported path). `wiki/active-feature.md`'s Scope Decisions, Session Duration, API Contract, and ACs 13/17/19 updated to match; original ADR-007 Decision left intact as the historical record

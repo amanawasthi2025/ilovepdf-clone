@@ -206,38 +206,38 @@ Any server component or route handler that needs to know the current session cal
 
 ### Signup
 
-- [ ] AC-01: User can navigate to `/signup` and see email + password fields
-- [ ] AC-02: Submit button is disabled until email and password pass client-side validation
-- [ ] AC-03: Submitting a valid new email/password creates a `User` row with a bcrypt password hash (never the plaintext password) and redirects to `/login` with a success message
-- [ ] AC-04: Submitting an already-registered email shows an inline "email already exists" error and does not create a duplicate `User` row
-- [ ] AC-05: Submitting a password under 8 characters is rejected by the API with `PASSWORD_TOO_SHORT`
-- [ ] AC-06: Submitting a malformed email is rejected by the API with `INVALID_EMAIL`
-- [ ] AC-07: Email is stored lowercased regardless of the casing typed by the user
-- [ ] AC-08: A network failure during signup shows a generic error banner and does not lose the entered form values
+- [x] AC-01: User can navigate to `/signup` and see email + password fields
+- [x] AC-02: Submit button is disabled until email and password pass client-side validation
+- [x] AC-03: Submitting a valid new email/password creates a `User` row with a bcrypt password hash (never the plaintext password) and redirects to `/login` with a success message
+- [x] AC-04: Submitting an already-registered email shows an inline "email already exists" error and does not create a duplicate `User` row
+- [x] AC-05: Submitting a password under 8 characters is rejected by the API with `PASSWORD_TOO_SHORT`
+- [x] AC-06: Submitting a malformed email is rejected by the API with `INVALID_EMAIL`
+- [x] AC-07: Email is stored lowercased regardless of the casing typed by the user
+- [x] AC-08: A network failure during signup shows a generic error banner and does not lose the entered form values
 
 ### Login
 
-- [ ] AC-09: User can navigate to `/login` and see email + password fields
-- [ ] AC-10: Submitting correct credentials for an existing account logs the user in and redirects to `/`
-- [ ] AC-11: Submitting an incorrect password shows a generic "Invalid email or password" error (no indication of which field is wrong)
-- [ ] AC-12: Submitting an email with no matching account shows the same generic error as AC-11 (no user enumeration)
-- [ ] AC-13: A successful login sets a signed JWT session cookie with a 30-day expiry (corrected from "creates a `Session` row" in Session 024 — see ADR-007 Addendum)
-- [ ] AC-14: The session cookie is HTTP-only and not readable via `document.cookie` in the browser
+- [x] AC-09: User can navigate to `/login` and see email + password fields
+- [x] AC-10: Submitting correct credentials for an existing account logs the user in and redirects to `/`
+- [x] AC-11: Submitting an incorrect password shows a generic "Invalid email or password" error (no indication of which field is wrong)
+- [x] AC-12: Submitting an email with no matching account shows the same generic error as AC-11 (no user enumeration)
+- [x] AC-13: A successful login sets a signed JWT session cookie with a 30-day expiry (corrected from "creates a `Session` row" in Session 024 — see ADR-007 Addendum)
+- [x] AC-14: The session cookie is HTTP-only and not readable via `document.cookie` in the browser
 
 ### Session & Nav
 
-- [ ] AC-15: When logged in, the nav shows the user's email and a "Log out" control on every page
-- [ ] AC-16: When logged out, the nav shows "Log in" and "Sign up" links on every page
-- [ ] AC-17: Clicking "Log out" clears the session cookie (Auth.js `signOut()`), redirects to `/`, and the nav reverts to the logged-out state (corrected from "deletes the `Session` row" in Session 024 — see ADR-007 Addendum)
-- [ ] AC-18: A logged-in session persists across a full page reload (server-rendered nav reflects the session on first paint, no client-side flash of the logged-out state)
-- [ ] AC-19: An expired or tampered session cookie is treated as logged-out without an error page (corrected from "expired or deleted session" in Session 024 — see ADR-007 Addendum)
+- [x] AC-15: When logged in, the nav shows the user's email and a "Log out" control on every page
+- [x] AC-16: When logged out, the nav shows "Log in" and "Sign up" links on every page
+- [x] AC-17: Clicking "Log out" clears the session cookie (Auth.js `signOut()`), redirects to `/`, and the nav reverts to the logged-out state (corrected from "deletes the `Session` row" in Session 024 — see ADR-007 Addendum)
+- [x] AC-18: A logged-in session persists across a full page reload (server-rendered nav reflects the session on first paint, no client-side flash of the logged-out state)
+- [x] AC-19: An expired or tampered session cookie is treated as logged-out without an error page (corrected from "expired or deleted session" in Session 024 — see ADR-007 Addendum)
 
 ### Anonymous Tools Unaffected
 
-- [ ] AC-20: `/merge` functions identically whether the visitor is logged in or logged out
-- [ ] AC-21: `/split` functions identically whether the visitor is logged in or logged out
-- [ ] AC-22: `/compress` functions identically whether the visitor is logged in or logged out
-- [ ] AC-23: No existing Merge/Split/Compress API route requires a session
+- [x] AC-20: `/merge` functions identically whether the visitor is logged in or logged out
+- [x] AC-21: `/split` functions identically whether the visitor is logged in or logged out
+- [x] AC-22: `/compress` functions identically whether the visitor is logged in or logged out
+- [x] AC-23: No existing Merge/Split/Compress API route requires a session
 
 ### Quality
 
@@ -271,7 +271,7 @@ No open questions remain that block implementation.
 |---|---|---|
 | 023 | Planning, ADR-007 & Acceptance Criteria | COMPLETE ✅ |
 | 024 | Schema (User/Account/Session/VerificationToken) + Signup/Login API | COMPLETE ✅ |
-| 025 | Frontend: `/signup`, `/login`, session-aware nav | Not started |
+| 025 | Frontend: `/signup`, `/login`, session-aware nav | COMPLETE ✅ |
 | 026 | E2E Tests, Polish & Definition of Done | Not started |
 
 ---
@@ -281,6 +281,17 @@ No open questions remain that block implementation.
 - Session strategy corrected from database to JWT mid-session — see ADR-007 Addendum. All references to "Session row"/"database sessions" throughout this document have been updated to describe JWT cookie behavior instead.
 - Auth.js's default `session` callback already surfaces `email` on `session.user` with no custom callback needed — confirmed via manual `GET /api/auth/session` verification against a real login.
 - `authorizeCredentials()` is exported separately from the Auth.js config object in `lib/auth.ts` specifically so it has a direct unit test without needing to mock the whole Auth.js request pipeline.
+
+---
+
+## Implementation Notes (Session 025)
+
+- `components/nav.tsx` is a new top-level `components/` directory (first shared cross-page component in the project) — an `async` Server Component reading `auth()` directly, rendered from `app/layout.tsx` above `<Providers>` so it appears on every route unconditionally.
+- Logout is a server action (`'use server'` inline in the nav's `<form action={...}>`) calling the server-side `signOut` exported from `lib/auth.ts` — no client JS needed for logout, and `Providers`/`app/providers.tsx` did not need a `SessionProvider` added (confirmed by reading `next-auth/react`'s source: `signIn`/`signOut` don't touch `SessionContext`, only `useSession` does, and the nav never calls `useSession`).
+- **Bug found during manual verification, fixed before sign-off:** after a successful client-side `signIn('credentials', { redirect: false })`, using `router.push('/')` left the nav showing the stale logged-out state — Next.js App Router's client Router Cache reuses the previously-rendered root layout (where `Nav` lives) across a soft navigation instead of re-invoking `auth()`, even though the new session cookie was already set correctly. `router.refresh()` before the push did not fix it either. Root-caused via a scripted Playwright session (not just the eventual E2E suite) that inspected the nav's rendered HTML immediately after login vs. after a hard reload — the hard reload always showed the correct state, isolating the bug to router-cache staleness rather than the cookie/session itself. Fixed by using `window.location.href = '/'` for the post-login redirect instead of `router.push`, matching the same full-round-trip behavior already used by the logout server action (which was unaffected by this bug). See `app/login/page.tsx`.
+- Signup's client-side validation (`app/signup/validation.ts`) reuses `zod`'s `.email()` check — the exact same validator the API route already uses — instead of a hand-rolled regex, so client and server can't drift.
+- Login has no dedicated validation module: the spec's client-validation requirement (AC-02) applies only to signup; login's submit button is gated on non-empty fields only, per the ACs.
+- AC-19 (tampered/expired cookie treated as logged-out, no error page) was verified directly rather than assumed from "Auth.js handles it": sent a request with a garbage `authjs.session-token` cookie value and confirmed a `200` response with the nav in its logged-out state.
 
 ---
 
