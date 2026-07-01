@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { PDFDocument, PDFName, PDFRawStream } from 'pdf-lib'
+import { PDFArray, PDFDocument, PDFName, PDFRawStream } from 'pdf-lib'
 import sharp from 'sharp'
 import type { Job } from 'bullmq'
 import { CompressionLevel, JobStatus } from '@ilovepdf/shared'
@@ -132,6 +132,68 @@ async function buildTextOnlyFixture(): Promise<Uint8Array> {
   return pdfDoc.save()
 }
 
+// Real-world scanner/camera/Adobe-produced PDFs virtually always attach a
+// color profile, so `ColorSpace` is `[/ICCBased <stream ref>]` rather than
+// the plain `/DeviceRGB` name pdf-lib's own `embedJpg` writes. Built by hand
+// at the same low level compress.ts reads, mirroring buildGrayscaleFlateFixture.
+async function buildIccRgbFixture(): Promise<Uint8Array> {
+  const jpegBytes = await sharp({
+    create: { width: 1200, height: 900, channels: 3, background: { r: 10, g: 10, b: 10 } },
+  })
+    .composite([
+      {
+        input: await sharp({
+          create: {
+            width: 1200,
+            height: 900,
+            channels: 3,
+            background: { r: 0, g: 0, b: 0 },
+            noise: { type: 'gaussian', mean: 128, sigma: 55 },
+          },
+        })
+          .png()
+          .toBuffer(),
+      },
+    ])
+    .jpeg({ quality: 95 })
+    .toBuffer()
+
+  const pdfDoc = await PDFDocument.create()
+  const context = pdfDoc.context
+
+  const iccStream = context.flateStream(new Uint8Array(3144), { N: 3, Alternate: 'DeviceRGB' })
+  const iccRef = context.register(iccStream)
+
+  const colorSpaceArray = PDFArray.withContext(context)
+  colorSpaceArray.push(PDFName.of('ICCBased'))
+  colorSpaceArray.push(iccRef)
+
+  const imageStream = context.stream(jpegBytes, {
+    Type: 'XObject',
+    Subtype: 'Image',
+    Width: 1200,
+    Height: 900,
+    BitsPerComponent: 8,
+    ColorSpace: colorSpaceArray,
+    Filter: 'DCTDecode',
+  })
+  const imageRef = context.register(imageStream)
+
+  // Placed at 300x225pt -> effective DPI = 1200 / (300/72) = 288, comfortably
+  // above every level's maxDpi, so a resize is expected at every level.
+  const page = pdfDoc.addPage([350, 275])
+  const resources = page.node.Resources()!
+  const xObjectDict = context.obj({})
+  resources.set(PDFName.of('XObject'), xObjectDict)
+  xObjectDict.set(PDFName.of('Im0'), imageRef)
+
+  const contentBytes = Buffer.from('q\n300 0 0 225 25 25 cm\n/Im0 Do\nQ')
+  const contentRef = context.register(context.stream(contentBytes, {}))
+  page.node.set(PDFName.of('Contents'), contentRef)
+
+  return pdfDoc.save()
+}
+
 async function buildCmykFixture(): Promise<Uint8Array> {
   const cmykJpeg = await sharp({ create: { width: 400, height: 300, channels: 3, background: { r: 10, g: 200, b: 30 } } })
     .jpeg()
@@ -197,6 +259,23 @@ describe('processCompressJob', () => {
       ]
       expect(secondUpdate[0].data.status).toBe(JobStatus.COMPLETED)
     }
+  })
+
+  it('recompresses a DCTDecode image whose ColorSpace is an ICCBased RGB profile (real-world scanner/camera PDFs)', async () => {
+    const bytes = await buildIccRgbFixture()
+    mocks.downloadFile.mockResolvedValue(Buffer.from(bytes))
+
+    const job = makeJob({ jobId: 'job-icc', inputKey: 'inputs/a.pdf', level: CompressionLevel.RECOMMENDED })
+    await processCompressJob(job)
+
+    const uploadCall = mocks.uploadFile.mock.calls[0] as [string, Buffer, string]
+    const outputBytes = uploadCall[1]
+    expect(outputBytes.length).toBeLessThan(bytes.length)
+
+    const reloaded = await PDFDocument.load(outputBytes)
+    const [stream] = findImageStreams(reloaded)
+    expect(stream.dict.lookup(PDFName.of('Filter'))?.toString()).toBe('/DCTDecode')
+    expect(stream.dict.lookup(PDFName.of('ColorSpace'))?.toString()).toBe('/DeviceRGB')
   })
 
   it('recompresses a grayscale FlateDecode bitmap and keeps it visually grayscale', async () => {
