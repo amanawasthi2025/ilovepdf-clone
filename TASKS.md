@@ -7,7 +7,27 @@
 
 ## Current Feature
 
-**Status:** None — awaiting approval for the next feature (per the One-Feature-at-a-Time Rule)
+**Feature:** PDF to Image
+**Status:** PLANNING
+**Branch:** `feature/pdf-to-image`
+**Spec:** `wiki/active-feature.md`
+
+### Description
+Allow a user to upload a single PDF, choose PNG or JPEG output, and download a ZIP containing one rasterized image per page (fixed 150 DPI, all pages, no ranges) via a new `/pdf-to-image` page (ADR-009). Reuses the full Merge/Split/Compress pipeline and participates in Job History (ADR-008) as a fourth job type — automatic association, ownership-enforced status/download, appears in `/history` with no page-level changes needed.
+
+### Session Breakdown
+| Session | Title | Status |
+|---|---|---|
+| 031 | Planning, ADR-009 & Acceptance Criteria | COMPLETE ✅ |
+| 032 | Schema + Worker Processor + API Routes | Not started |
+| 033 | Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix | Not started |
+| 034 | E2E Tests, Polish & Definition of Done | Not started |
+
+### Acceptance Criteria
+23 criteria defined — see `wiki/active-feature.md`. None yet verified (planning session only).
+
+### Blocked Items
+None.
 
 ---
 
@@ -153,26 +173,25 @@ None.
 
 | Priority | Feature | Notes |
 |---|---|---|
-| 1 | **PDF to Image** | Converts pages to PNG/JPG |
-| 2 | **Image to PDF** | Inverse of above |
-| 3 | **PDF Rotate** | Simple but commonly needed |
-| 4 | **PDF to Word** | Complex conversion; requires LibreOffice |
-| 5 | **Word to PDF** | Inverse of above |
-| 6 | **Subscription / Payments** | Monetization; requires auth |
-| 7 | **PDF Watermark** | Add text/image watermark |
-| 8 | **PDF Unlock** | Remove password protection |
-| 9 | **PDF Protect** | Add password protection |
-| 10 | **Developer API** | Programmatic access; requires auth + subscriptions |
+| 1 | **Image to PDF** | Inverse of PDF to Image |
+| 2 | **PDF Rotate** | Simple but commonly needed |
+| 3 | **PDF to Word** | Complex conversion; requires LibreOffice |
+| 4 | **Word to PDF** | Inverse of above |
+| 5 | **Subscription / Payments** | Monetization; requires auth |
+| 6 | **PDF Watermark** | Add text/image watermark |
+| 7 | **PDF Unlock** | Remove password protection |
+| 8 | **PDF Protect** | Add password protection |
+| 9 | **Developer API** | Programmatic access; requires auth + subscriptions |
 
 ---
 
 ## Notes
 
 - Merge, Split, Compress, User Authentication, and Job History are all complete.
-- No Current Feature is in progress — awaiting explicit approval before starting the next one (per the One-Feature-at-a-Time Rule).
-- Items 4–5 require LibreOffice headless — architectural complexity increases there.
-- Items 6+ require payment infrastructure — significant scope jump.
+- PDF to Image is the Current Feature, in PLANNING (Session 031 complete; Sessions 032–034 remain, per `wiki/active-feature.md`).
+- Items 3–4 require LibreOffice headless — architectural complexity increases there.
+- Items 5+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 030 (Job History: E2E Tests, Polish & Definition of Done — feature COMPLETE)*
+*Last updated: 2026-07-01 — Session 031 (PDF to Image: Planning, ADR-009 & Acceptance Criteria)*

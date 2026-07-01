@@ -7,6 +7,18 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.6.0] — In Progress
+
+### Added (PDF to Image)
+
+**Session 031 — Planning, ADR-009 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — full PDF to Image spec: fixed-150-DPI rasterization via Sharp's bundled PDFium, user-chosen PNG/JPEG output, all-pages-only (no ranges), always-ZIP output packaging (mirrors Split), participation in Job History (ADR-008) as a fourth job type with no `/history` page changes needed. 23 acceptance criteria.
+- `docs/adr/009-pdf-to-image-rasterization.md` — documents the rasterization library decision: Sharp + bundled PDFium chosen over `pdfjs-dist`+canvas and a `poppler-utils` CLI wrapper, on the grounds of zero new dependencies (Sharp is already vetted per ADR-006) and no new system-level binary requirement.
+- Identified (not yet fixed — Session 033) a latent bug in `apps/web/app/history/download-button.tsx`: its `jobType.toLowerCase()` route-slug derivation only works for single-word job types; `PDF_TO_IMAGE` would incorrectly produce `pdf_to_image` instead of the kebab-case `pdf-to-image` route.
+- `TASKS.md` updated — PDF to Image is now the Current Feature (Status: PLANNING); removed from Future Backlog, remaining items renumbered.
+
+---
+
 ## [0.5.0] — 2026-07-01
 
 ### Added (Job History)
