@@ -114,7 +114,7 @@ Reasoning:
 
 - Deleted: `.github/workflows/ci.yml`, `.github/workflows/process-coderabbit.yml`, `.coderabbit.yaml`, and the now-empty `.github/` directory
 - GitHub branch protection on `develop` and `master` updated via the GitHub API: `required_status_checks` set to `null`, `required_pull_request_reviews.required_approving_review_count` set to `0` (PR still required to merge — `required_pull_request_reviews` object retained), all other settings (`allow_force_pushes: false`, `allow_deletions: false`, `enforce_admins: false`) unchanged
-- The CodeRabbit GitHub App installation itself was left in place at the user's direction — only its repo-level config and the workflow that acted on its reviews were removed. If desired, uninstalling the app entirely is a separate, account-level action for the user to take via GitHub's UI (Settings → Integrations → GitHub Apps)
+- The CodeRabbit GitHub App installation was initially left in place, since uninstalling an app is an account-level action not reachable via the API with a personal access token (`gh api repos/.../installation` and `gh api user/installations` both require GitHub-App-issued OAuth tokens, confirmed by testing). The user subsequently uninstalled it manually via GitHub's UI (Settings → Installations) on 2026-07-01 — CodeRabbit is now fully removed from this project: no config, no workflow, no app installation
 - `CLAUDE.md`, `PROJECT.md`, and `wiki/development-workflow.md` updated to describe the manual quality-gate discipline that replaces the automated gate
 
 ---

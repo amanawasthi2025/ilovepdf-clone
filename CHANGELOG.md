@@ -15,6 +15,7 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Removed `.github/workflows/ci.yml`, `.github/workflows/process-coderabbit.yml`, `.coderabbit.yaml`, and the now-empty `.github/` directory — see ADR-005
 - Updated `develop`/`master` GitHub branch protection: dropped the required "Typecheck, Lint & Test" status check and set required approving reviews to 0; a PR is still required to merge, no force-pushes/deletions allowed
 - `CLAUDE.md`, `PROJECT.md`, `wiki/development-workflow.md`, `wiki/testing-strategy.md` updated to describe manual, local quality gates (`npm run typecheck`/`lint`/`test`, `npx playwright test`) run before opening and before merging every PR, replacing the automated CI/CodeRabbit gates
+- CodeRabbit GitHub App installation uninstalled by the user via GitHub's UI (not reachable via API — `gh api` confirmed both `repos/.../installation` and `user/installations` require GitHub-App-issued OAuth tokens, not a personal access token). `docs/adr/005-remove-cicd-coderabbit.md` updated to reflect this; CodeRabbit is now fully removed, not just de-configured
 - No application code changes
 
 ## [0.2.1] — 2026-07-01
