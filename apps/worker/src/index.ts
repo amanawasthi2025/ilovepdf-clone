@@ -3,6 +3,7 @@ import { Worker } from 'bullmq'
 import type { Job } from 'bullmq'
 import type {
   CompressJobPayload,
+  ImageToPdfJobPayload,
   MergeJobPayload,
   PdfToImageJobPayload,
   SplitJobPayload,
@@ -13,10 +14,13 @@ import { processMergeJob } from './jobs/merge.js'
 import { processSplitJob } from './jobs/split.js'
 import { processCompressJob } from './jobs/compress.js'
 import { processPdfToImageJob } from './jobs/pdf-to-image.js'
+import { processImageToPdfJob } from './jobs/image-to-pdf.js'
 
 const redisUrl = new URL(env.REDIS_URL)
 
-const worker = new Worker<MergeJobPayload | SplitJobPayload | CompressJobPayload | PdfToImageJobPayload>(
+const worker = new Worker<
+  MergeJobPayload | SplitJobPayload | CompressJobPayload | PdfToImageJobPayload | ImageToPdfJobPayload
+>(
   'document-processing',
   async (job) => {
     if (job.name === 'merge') {
@@ -30,6 +34,9 @@ const worker = new Worker<MergeJobPayload | SplitJobPayload | CompressJobPayload
     }
     if (job.name === 'pdf-to-image') {
       return processPdfToImageJob(job as Job<PdfToImageJobPayload>)
+    }
+    if (job.name === 'image-to-pdf') {
+      return processImageToPdfJob(job as Job<ImageToPdfJobPayload>)
     }
     logger.warn({ jobName: job.name }, 'unknown job type received — skipping')
   },

@@ -13,6 +13,7 @@ const JOB_TYPE_ROUTE_SLUGS: Record<JobType, string> = {
   [JobType.SPLIT]: 'split',
   [JobType.COMPRESS]: 'compress',
   [JobType.PDF_TO_IMAGE]: 'pdf-to-image',
+  [JobType.IMAGE_TO_PDF]: 'image-to-pdf',
 }
 
 export default function DownloadButton({ jobId, jobType }: Props) {

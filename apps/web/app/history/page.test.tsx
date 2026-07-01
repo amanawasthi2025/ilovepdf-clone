@@ -80,6 +80,13 @@ describe('HistoryPage', () => {
         createdAt: new Date('2026-07-01T07:00:00Z'),
         errorMessage: null,
       },
+      {
+        id: 'job-5',
+        jobType: 'IMAGE_TO_PDF',
+        status: 'COMPLETED',
+        createdAt: new Date('2026-07-01T06:00:00Z'),
+        errorMessage: null,
+      },
     ] as never)
 
     render(await HistoryPage())
@@ -88,12 +95,14 @@ describe('HistoryPage', () => {
     expect(screen.getByText('Merge')).toBeInTheDocument()
     expect(screen.getByText('Split')).toBeInTheDocument()
     expect(screen.getByText('PDF to Image')).toBeInTheDocument()
+    expect(screen.getByText('Image to PDF')).toBeInTheDocument()
     expect(screen.getByText('Something went wrong')).toBeInTheDocument()
 
     expect(screen.getByTestId('download-job-1')).toBeInTheDocument()
     expect(screen.queryByTestId('download-job-2')).not.toBeInTheDocument()
     expect(screen.queryByTestId('download-job-3')).not.toBeInTheDocument()
     expect(screen.getByTestId('download-job-4')).toBeInTheDocument()
+    expect(screen.getByTestId('download-job-5')).toBeInTheDocument()
   })
 
   it('shows an empty-state message when the user has no jobs', async () => {

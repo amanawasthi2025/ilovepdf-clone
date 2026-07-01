@@ -106,6 +106,16 @@ Add entries after completing a feature, resolving a production issue, or a notab
 **Lesson:** A "read-only" library operation (here: figuring out an image's on-page size) can require reimplementing a sliver of the format's execution model when the library only exposes structure, not semantics. Before writing that code, check whether the scope can be narrowed (this implementation explicitly did not walk into nested Form XObjects, falling back to quality-only recompression there) rather than building a general-purpose interpreter for a v1.
 **Applies to:** architecture, performance
 
+### 2026-07-01 — pdf-lib's JPEG embedder ignores Buffer.byteOffset, corrupting small pool-allocated buffers
+
+**Context:** Image to PDF Session 036 — manually verifying the new `image-to-pdf.ts` worker processor end-to-end against the real local stack (not just mocked unit tests) before calling the session done.
+
+**What happened:** `pdfDoc.embedJpg(buffer)` threw `SOI not found in JPEG` on a real, valid JPEG (confirmed byte-for-byte identical in MinIO, magic bytes `FF D8 FF` present) — but only when the buffer came from `downloadFile()`'s `Buffer.concat(chunks)`, not when passed a Sharp-generated buffer directly in a unit test. Root cause: `pdf-lib`'s `JpegEmbedder.for()` does `new DataView(imageData.buffer)`, reading from byte 0 of the buffer's *underlying* `ArrayBuffer` — but Node's `Buffer.concat` (and `Buffer.allocUnsafe`/`Buffer.from`) frequently returns a `Buffer` whose data lives at a nonzero `byteOffset` into a shared, pool-allocated `ArrayBuffer` for small sizes (confirmed: a 703-byte buffer had `byteOffset=216`). pdf-lib's PNG embedder doesn't have this bug (different decode path), which is why only the JPEG input silently failed — and only in the real download path, never in unit tests built on freshly-allocated buffers.
+
+**Lesson:** When passing a Node `Buffer` to a library that might read its raw `.buffer` (ArrayBuffer) instead of respecting `.byteOffset`/`.length`, don't trust "it's small, it must be a full, dedicated allocation" — Node's pooling makes that false for exactly the small-buffer case a fixture test is likely to use if the fixture happens to be pool-safe by luck. `new Uint8Array(buffer)` reliably forces a byteOffset-0 copy and is the fix. More generally: this bug was invisible to every unit test (which mock the storage boundary with directly-constructed buffers) and only surfaced once real MinIO round-trip buffers were used — reinforcing the project's now-repeated pattern (see the ADR-009 Sharp/PDFium entry below) that a new library code path handling real I/O needs at least one real, unmocked round trip before being trusted.
+
+**Applies to:** architecture, testing, DX
+
 ### 2026-07-01 — An ADR's factual claim about a dependency's capability was never actually verified, and it was wrong
 **Context:** PDF to Image Session 031 (planning) → Session 032 (implementation). ADR-009 chose Sharp for PDF rasterization on the stated grounds that "PDFium ships in Sharp's official prebuilt binaries."
 **What happened:** That claim was false for this project's actual installed dependency. `sharp@0.33.5`'s `sharp.format.pdf.input.buffer` is `false`, and calling `sharp(pdfBuffer, ...)` throws `Input buffer contains unsupported image format` — confirmed only when Session 032 actually ran Sharp against a generated PDF fixture, the first time anyone had done so. Sharp's real PDF support requires a globally-installed libvips compiled with PDFium/poppler, which is never part of the npm-published prebuilt binaries — exactly the system-dependency cost ADR-009 had rejected `poppler-utils` for. The ADR's Context section stated this had been "confirmed against Sharp's own installation documentation before making this decision, not assumed" — but it hadn't actually been run against real input.
@@ -145,4 +155,4 @@ The following categories commonly produce learnable moments in document-processi
 
 ---
 
-*Last updated: 2026-07-01 — Session 034 (PDF to Image: E2E tests, polish, Definition of Done — feature complete)*
+*Last updated: 2026-07-01 — Session 036 (Image to PDF: Schema + Worker Processor + API Routes)*

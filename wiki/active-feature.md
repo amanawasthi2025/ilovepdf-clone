@@ -7,9 +7,9 @@
 
 ## Current Feature: Image to PDF
 
-**Status:** IN PROGRESS — Session 035 (Planning)
+**Status:** IN PROGRESS — Session 036 (Schema + Worker Processor + API Routes)
 **Started:** 2026-07-01
-**Branch:** `feature/image-to-pdf` (not yet created)
+**Branch:** `feature/image-to-pdf`
 **Sessions:** 035 (planning) → 036 (schema + worker + API routes) → 037 (frontend) → 038 (E2E tests, polish, DoD)
 
 ---
@@ -125,26 +125,26 @@ Currently renders four tool cards (Merge/Split/Compress/PDF to Image, added Sess
 
 ### Upload & Processing
 
-- [ ] AC-01: Uploading 1 valid PNG creates a `Job` (`jobType: IMAGE_TO_PDF`, `inputKeys` length 1) and returns a `jobId`
-- [ ] AC-02: Uploading multiple valid PNG/JPEG images (mixed formats) creates a `Job` with `inputKeys` in upload order
-- [ ] AC-03: Uploading 0 files is rejected with a `400` validation error
-- [ ] AC-04: Uploading more than 10 files is rejected with a `400` validation error
-- [ ] AC-05: Uploading a file that is not PNG/JPEG (by declared type or magic bytes) is rejected with a `400` validation error, same pattern as Merge/Split/Compress/PDF to Image
-- [ ] AC-06: Uploading a file exceeding `MAX_FILE_SIZE_BYTES`, or a combined set exceeding `MAX_TOTAL_SIZE_BYTES`, is rejected with a `413` error, same pattern as Merge
-- [ ] AC-07: The worker embeds each input image as a full-bleed page sized to that image's pixel dimensions, in upload order
-- [ ] AC-08: A job with N input images produces a single PDF with exactly N pages, in upload order
-- [ ] AC-09: A malformed/non-image input (passing the API boundary check but failing to decode) fails the job with `status: FAILED` and a descriptive `errorMessage`, same pattern as the other worker processors
+- [x] AC-01: Uploading 1 valid PNG creates a `Job` (`jobType: IMAGE_TO_PDF`, `inputKeys` length 1) and returns a `jobId`
+- [x] AC-02: Uploading multiple valid PNG/JPEG images (mixed formats) creates a `Job` with `inputKeys` in upload order
+- [x] AC-03: Uploading 0 files is rejected with a `400` validation error
+- [x] AC-04: Uploading more than 10 files is rejected with a `400` validation error
+- [x] AC-05: Uploading a file that is not PNG/JPEG (by declared type or magic bytes) is rejected with a `400` validation error, same pattern as Merge/Split/Compress/PDF to Image
+- [x] AC-06: Uploading a file exceeding `MAX_FILE_SIZE_BYTES`, or a combined set exceeding `MAX_TOTAL_SIZE_BYTES`, is rejected with a `413` error, same pattern as Merge
+- [x] AC-07: The worker embeds each input image as a full-bleed page sized to that image's pixel dimensions, in upload order
+- [x] AC-08: A job with N input images produces a single PDF with exactly N pages, in upload order
+- [x] AC-09: A malformed/non-image input (passing the API boundary check but failing to decode) fails the job with `status: FAILED` and a descriptive `errorMessage`, same pattern as the other worker processors
 
 ### Status / Download / Ownership
 
-- [ ] AC-10: Status/download for a job submitted while logged in succeeds for the owning user's session, same as the other four tool types
-- [ ] AC-11: Status/download for that job returns `403 JOB_ACCESS_DENIED` for no session or a different user's session
-- [ ] AC-12: Status/download for an anonymous (`userId` null) `IMAGE_TO_PDF` job behaves identically regardless of requester session state — no regression to the ADR-008 guard logic
+- [x] AC-10: Status/download for a job submitted while logged in succeeds for the owning user's session, same as the other four tool types
+- [x] AC-11: Status/download for that job returns `403 JOB_ACCESS_DENIED` for no session or a different user's session
+- [x] AC-12: Status/download for an anonymous (`userId` null) `IMAGE_TO_PDF` job behaves identically regardless of requester session state — no regression to the ADR-008 guard logic
 
 ### History Integration
 
-- [ ] AC-13: An `IMAGE_TO_PDF` job submitted while logged in appears in `/history` with the friendly label "Image to PDF", correct status, and created date
-- [ ] AC-14: The `/history` Download control for a `COMPLETED` `IMAGE_TO_PDF` job successfully downloads the correct output PDF (validates the `JOB_TYPE_ROUTE_SLUGS` entry)
+- [x] AC-13: An `IMAGE_TO_PDF` job submitted while logged in appears in `/history` with the friendly label "Image to PDF", correct status, and created date
+- [x] AC-14: The `/history` Download control for a `COMPLETED` `IMAGE_TO_PDF` job successfully downloads the correct output PDF (validates the `JOB_TYPE_ROUTE_SLUGS` entry)
 
 ### Frontend
 
@@ -154,8 +154,8 @@ Currently renders four tool cards (Merge/Split/Compress/PDF to Image, added Sess
 
 ### Anonymous Use Unaffected
 
-- [ ] AC-18: `/image-to-pdf` functions identically whether the visitor is logged in or logged out
-- [ ] AC-19: All pre-existing Merge/Split/Compress/Auth/Job History/PDF to Image unit, integration, and E2E tests continue to pass unmodified
+- [x] AC-18: `/image-to-pdf` functions identically whether the visitor is logged in or logged out
+- [x] AC-19: All pre-existing Merge/Split/Compress/Auth/Job History/PDF to Image unit, integration, and E2E tests continue to pass unmodified
 
 ### Quality
 
@@ -185,8 +185,8 @@ No open questions remain that block implementation.
 | Session | Title | Status |
 |---|---|---|
 | 035 | Planning, ADR-010 & Acceptance Criteria | COMPLETE ✅ |
-| 036 | Schema (`JobType.IMAGE_TO_PDF`) + Worker Processor + API Routes | Not started |
-| 037 | Frontend: `/image-to-pdf` page + home page card + history label/route-slug entries | Not started |
+| 036 | Schema (`JobType.IMAGE_TO_PDF`) + Worker Processor + API Routes | COMPLETE ✅ |
+| 037 | Frontend: `/image-to-pdf` page + home page card | Not started |
 | 038 | E2E Tests, Polish & Definition of Done | Not started |
 
 ---

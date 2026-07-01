@@ -9,6 +9,7 @@ const JOB_TYPE_LABELS: Record<string, string> = {
   SPLIT: 'Split',
   COMPRESS: 'Compress',
   PDF_TO_IMAGE: 'PDF to Image',
+  IMAGE_TO_PDF: 'Image to PDF',
 }
 
 const HISTORY_LIMIT = 50

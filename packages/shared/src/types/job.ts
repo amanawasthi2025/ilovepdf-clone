@@ -10,6 +10,7 @@ export enum JobType {
   SPLIT = 'SPLIT',
   COMPRESS = 'COMPRESS',
   PDF_TO_IMAGE = 'PDF_TO_IMAGE',
+  IMAGE_TO_PDF = 'IMAGE_TO_PDF',
 }
 
 export enum CompressionLevel {
@@ -44,4 +45,9 @@ export interface PdfToImageJobPayload {
   jobId: string
   inputKey: string
   format: ImageFormat
+}
+
+export interface ImageToPdfJobPayload {
+  jobId: string
+  inputKeys: string[]
 }

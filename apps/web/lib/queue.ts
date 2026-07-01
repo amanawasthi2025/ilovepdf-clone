@@ -1,6 +1,7 @@
 import { Queue } from 'bullmq'
 import type {
   CompressJobPayload,
+  ImageToPdfJobPayload,
   MergeJobPayload,
   PdfToImageJobPayload,
   SplitJobPayload,
@@ -10,7 +11,7 @@ import { env } from './env'
 const redisUrl = new URL(env.REDIS_URL)
 
 export const documentProcessingQueue = new Queue<
-  MergeJobPayload | SplitJobPayload | CompressJobPayload | PdfToImageJobPayload
+  MergeJobPayload | SplitJobPayload | CompressJobPayload | PdfToImageJobPayload | ImageToPdfJobPayload
 >(
   'document-processing',
   {

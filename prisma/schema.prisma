@@ -32,6 +32,7 @@ enum JobType {
   SPLIT
   COMPRESS
   PDF_TO_IMAGE
+  IMAGE_TO_PDF
 }
 
 enum ImageFormat {

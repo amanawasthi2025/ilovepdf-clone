@@ -4,4 +4,5 @@ export type {
   SplitJobPayload,
   CompressJobPayload,
   PdfToImageJobPayload,
+  ImageToPdfJobPayload,
 } from './types/job.js'

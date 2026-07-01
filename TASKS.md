@@ -8,8 +8,8 @@
 ## Current Feature
 
 **Feature:** Image to PDF
-**Status:** IN PROGRESS — Session 035 (Planning)
-**Branch:** `feature/image-to-pdf` (not yet created)
+**Status:** IN PROGRESS — Session 036 (Schema + Worker Processor + API Routes)
+**Branch:** `feature/image-to-pdf`
 **Spec:** `wiki/active-feature.md`
 
 ### Description
@@ -19,12 +19,12 @@ Allow a user to upload 1–10 PNG/JPEG images and download a single PDF with one
 | Session | Title | Status |
 |---|---|---|
 | 035 | Planning, ADR-010 & Acceptance Criteria | COMPLETE ✅ |
-| 036 | Schema + Worker Processor + API Routes | Not started |
-| 037 | Frontend: `/image-to-pdf` page + home page card + history label/route-slug entries | Not started |
+| 036 | Schema + Worker Processor + API Routes | COMPLETE ✅ |
+| 037 | Frontend: `/image-to-pdf` page + home page card | Not started |
 | 038 | E2E Tests, Polish & Definition of Done | Not started |
 
 ### Acceptance Criteria
-24 criteria drafted — see `wiki/active-feature.md`. None yet verified (implementation not started).
+24 criteria drafted — see `wiki/active-feature.md`. AC-01–AC-14 and AC-18 verified this session; AC-15–AC-17 and AC-19–AC-24 remain.
 
 ### Blocked Items
 None.
@@ -218,10 +218,10 @@ None.
 ## Notes
 
 - Merge, Split, Compress, User Authentication, Job History, and PDF to Image are all complete.
-- Current Feature: **Image to PDF** (ADR-010) — Session 035 (Planning) complete; Sessions 036–038 not started.
+- Current Feature: **Image to PDF** (ADR-010) — Sessions 035–036 complete; Sessions 037–038 not started.
 - Items 2–3 require LibreOffice headless — architectural complexity increases there.
 - Items 4+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 035 (Image to PDF: Planning, ADR-010 & Acceptance Criteria)*
+*Last updated: 2026-07-01 — Session 036 (Image to PDF: Schema + Worker Processor + API Routes)*
