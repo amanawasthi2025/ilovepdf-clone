@@ -65,7 +65,8 @@ A feature is **Done** only when ALL of the following are true:
 - [ ] Any new ADRs created in `docs/adr/`
 - [ ] Git commit with a meaningful message on a feature branch
 - [ ] PR opened from `feature/<name>` → `develop` (mandatory — not optional)
-- [ ] PR merged into `develop` once quality gates pass (CodeRabbit review is currently disabled — see `## CodeRabbit Workflow (Disabled)` below)
+- [ ] Local quality gates re-run and green on the PR branch (`npm run typecheck`, `npm run lint`, `npm run test`) — there is no CI to run them automatically, see `## CI/CD & Code Review (Removed)` below
+- [ ] PR merged into `develop` directly once the above passes — no automated review tool gate
 
 ---
 
@@ -171,28 +172,15 @@ Never skip pre-commit hooks.
 
 ---
 
-## CodeRabbit Workflow (Disabled)
+## CI/CD & Code Review (Removed)
 
-**Status: disabled as of 2026-07-01, by explicit user instruction. Do not invoke or wait for CodeRabbit reviews until the user explicitly reinstates this section.**
+**Status: removed as of 2026-07-01, by explicit user instruction — see ADR-005.** GitHub Actions CI and CodeRabbit are no longer part of this project. There is no workflow file, no automated status check, and no automated review tool. Concretely:
 
-CodeRabbit is **not** a required review step, quality gate, or part of the merge path right now. Concretely:
-
-- Do not wait for a CodeRabbit review or status check before merging a PR.
-- Do not treat open CodeRabbit comments (if any appear anyway, since the GitHub App may still be installed) as blocking — they are optional input only, not a gate.
-- The PR-opening requirement still stands (see Definition of Done): open the PR from `feature/<name>` → `develop` right after the final feature commit.
-- Once the standard quality gates pass (typecheck, lint, tests, manual verification) and the PR is open, merge `feature/<name>` into `develop` directly — no review-tool gate in between.
+- Do not reference, invoke, or wait for CI or CodeRabbit — the config/workflow files that ran them have been deleted, and GitHub branch protection no longer requires either.
+- Quality gates (`npm run typecheck`, `npm run lint`, `npm run test`) are run **locally**, by you, before opening a PR and again before merging it. This is now a manual discipline, not an automated gate — treat it as non-negotiable precisely because nothing else enforces it.
+- The PR-opening requirement still stands (see Definition of Done): open the PR from `feature/<name>` → `develop` right after the final feature commit. Branch protection still requires a PR to merge (no direct pushes), it just no longer requires a status check or an approving review.
+- Merge `feature/<name>` into `develop` directly once local quality gates are green — no review-tool gate, no status check to wait for.
 - Still document any new lessons learned in `wiki/lessons-learned.md` after merging.
-
-The step-by-step process below is preserved for when CodeRabbit is reintroduced — it is not currently active:
-
-1. Open PR from `feature/<name>` → `develop` using `gh pr create` right after the final commit
-2. Wait for CodeRabbit to post inline review comments (typically 2–5 minutes)
-3. For each finding, decide:
-   - **Valid** → apply the fix with a commit on the feature branch and push
-   - **Rejected** → reply to the inline comment on GitHub with a clear justification (e.g. "out of scope for this feature", "contradicts ADR-001", "intentional design decision because…")
-4. Do not consider the review done until all threads are resolved or explicitly replied to
-5. Merge `feature/<name>` into `develop` once CodeRabbit is clean
-6. Document any new lessons learned in `wiki/lessons-learned.md`
 
 ---
 
@@ -253,4 +241,4 @@ If you are uncertain about any decision:
 
 ---
 
-*Last updated: 2026-07-01 — Session 015 (CodeRabbit Workflow disabled by user instruction)*
+*Last updated: 2026-07-01 — Session 017 (CI/CD and CodeRabbit removed, native local dev only)*

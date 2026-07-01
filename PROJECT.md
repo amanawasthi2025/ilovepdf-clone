@@ -128,8 +128,8 @@ See `wiki/architecture.md` for full justification. Summary:
 | Document Processing | pdf-lib (JS) + LibreOffice headless | JS for simple ops, LibreOffice for format conversion |
 | Testing | Vitest + Playwright | Fast unit tests, reliable E2E |
 | Linting | ESLint + Prettier | Consistent code style |
-| CI | GitHub Actions | Integrated, widely supported |
 | Local Dev Services | Native installs (PostgreSQL, Redis, MinIO) | No container overhead for a solo dev workflow; see ADR-004 |
+| CI/CD & Review | None (removed) | Local-only quality gates for a solo, AI-assisted workflow; see ADR-005 |
 
 ---
 
@@ -138,8 +138,8 @@ See `wiki/architecture.md` for full justification. Summary:
 ### Code Quality
 - TypeScript strict mode — no errors, no `any` without justification
 - Zero lint warnings in production commits
-- All tests pass before merge
-- Code reviewed (by CodeRabbit) before merge to `develop`
+- All tests pass locally before merge (no CI — see ADR-005)
+- Code self-reviewed against acceptance criteria before merge to `develop`
 
 ### Test Coverage
 - Unit tests for all business logic
@@ -177,7 +177,7 @@ A feature is **Done** only when:
 5. Session note written
 6. Any ADRs created for architectural decisions made
 7. Git commit on a feature branch
-8. CodeRabbit review completed and findings addressed
+8. Local quality gates (typecheck, lint, test) green on the PR branch — no CI to run them automatically
 
 ---
 
@@ -191,7 +191,7 @@ A feature is **Done** only when:
 6. Implement the feature as a vertical slice
 7. Write tests
 8. Update all documentation
-9. Open PR → CodeRabbit review → address findings
+9. Open PR → run local quality gates → merge directly (no CI, no automated review — see ADR-005)
 10. Merge → update `TASKS.md` and `CHANGELOG.md`
 11. Stop and wait for next feature assignment
 
@@ -206,7 +206,7 @@ This is currently a solo project assisted by Claude Code. The following guidelin
 - Never commit secrets, keys, or credentials
 - Write commit messages that explain *why*, not *what*
 - Keep PRs small — one feature, one PR
-- All PRs require CodeRabbit review
+- Run `npm run typecheck && npm run lint && npm run test` locally before opening and before merging every PR — there is no CI to catch what you skip
 - Update documentation as part of the same PR, not as a follow-up
 
 ---
@@ -233,4 +233,4 @@ This project is primarily developed with Claude Code as the engineering assistan
 
 ---
 
-*Last updated: 2026-06-30 — Session 001 (Project Initialization)*
+*Last updated: 2026-07-01 — Session 017 (CI/CD and CodeRabbit removed, native local dev only)*

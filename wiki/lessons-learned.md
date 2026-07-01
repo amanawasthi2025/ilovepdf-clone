@@ -8,7 +8,7 @@
 
 ## How to Add an Entry
 
-Add entries after completing a feature, resolving a production issue, or completing a CodeRabbit review. Format:
+Add entries after completing a feature, resolving a production issue, or a notable PR self-review finding. Format:
 
 ```
 ### YYYY-MM-DD — <Short Title>

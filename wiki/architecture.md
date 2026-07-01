@@ -106,12 +106,9 @@ Cloud Provider
 │   └── migrations/              # Migration history
 │
 ├── wiki/                        # Long-term knowledge base
-├── docs/
-│   ├── adr/                     # Architectural Decision Records
-│   └── session-notes/           # Engineering journal
-│
-└── .github/
-    └── workflows/               # GitHub Actions CI/CD
+└── docs/
+    ├── adr/                     # Architectural Decision Records
+    └── session-notes/           # Engineering journal
 ```
 
 ---
@@ -125,7 +122,7 @@ Cloud Provider
 - React-based, well-established, excellent ecosystem
 - App Router gives us server components (reduce client bundle), server actions, and co-located API routes
 - TypeScript eliminates entire categories of runtime bugs
-- Single deployment unit: frontend + API in one container
+- Single deployment unit: frontend + API in one process
 - **Alternative considered:** Separate React SPA (Vite) + Express API. Rejected because it doubles the deployment surface and adds cross-origin complexity without meaningful benefit at this scale.
 
 **Tailwind CSS**
@@ -243,14 +240,15 @@ Cloud Provider
 - PostgreSQL and Redis installed natively via the OS package manager; MinIO runs as a standalone binary
 - Application code is unaffected: both still speak the same protocols (Postgres wire protocol, Redis protocol, S3-compatible HTTP API) as their managed-service production counterparts
 
-**GitHub Actions**
+**No CI/CD**
 
-- CI: lint → typecheck → test → build on every PR
-- CD: deploy on merge to `main` (configuration TBD per deployment target)
+- No GitHub Actions, no automated review tool — see ADR-005
+- Lint → typecheck → test → E2E are run manually before opening and before merging every PR (`wiki/development-workflow.md`)
+- Deployment mechanism (and any CD) remains TBD, same as the still-undecided production target above
 
 **Turborepo** (monorepo build system)
 
-- Caches build outputs; speeds up CI
+- Caches build outputs; speeds up local task runs
 - Orchestrates tasks across `apps/` and `packages/`
 
 ---
@@ -286,4 +284,4 @@ Cloud Provider
 
 ---
 
-*Last updated: 2026-07-01 — Session 016 (Remove Docker, Native Local Dev)*
+*Last updated: 2026-07-01 — Session 017 (CI/CD and CodeRabbit removed, native local dev only)*
