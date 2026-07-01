@@ -7,7 +7,29 @@
 
 ## Current Feature
 
-None — PDF Split is complete and awaiting the next feature to be approved per the One-Feature-at-a-Time rule.
+**Feature:** PDF Compress
+**Status:** IN PROGRESS
+**Branch:** `feature/pdf-compress`
+**Started:** 2026-07-01
+**Spec:** `wiki/active-feature.md`
+
+### Description
+Allow a user to upload a single PDF and a compression level (Low / Recommended / High), recompress its embedded images via pdf-lib + Sharp (ADR-006) and optimize its object structure, and download the resulting smaller PDF. No authentication required. Reuses the full pipeline established by Merge/Split.
+
+### Session Breakdown
+| Session | Title | Status |
+|---|---|---|
+| 018 | Planning, ADR-006 & Acceptance Criteria | COMPLETE ✅ |
+| 019 | Compress API (`POST /api/compress/jobs`, validation) | Not started |
+| 020 | Worker: pdf-lib Image Extraction + Sharp Recompression Processor | Not started |
+| 021 | Frontend: `/compress` Upload, Level Selector, Polling & Download UI | Not started |
+| 022 | E2E Tests, Polish & Definition of Done | Not started |
+
+### Acceptance Criteria
+40 criteria defined — see `wiki/active-feature.md`. None yet verified (implementation not started).
+
+### Blocked Items
+None. One implementation risk flagged for Session 020: the exact low-level pdf-lib API for mutating image XObject streams needs a short spike before the full processor is written (see ADR-006 and `wiki/active-feature.md` Worker Specification).
 
 ---
 
@@ -115,4 +137,4 @@ None.
 
 ---
 
-*Last updated: 2026-07-01 — Session 015 (PDF Split Complete)*
+*Last updated: 2026-07-01 — Session 018 (PDF Compress Planning)*

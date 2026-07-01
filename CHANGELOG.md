@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.3.0] — 2026-07-01
+
+### Added (PDF Compress — In Progress)
+
+**Session 018 — Planning, ADR-006 & Acceptance Criteria (2026-07-01)**
+- `wiki/active-feature.md` — complete PDF Compress spec (compression level presets and parameters, image color-space/filter scope, job lifecycle, API contract, worker spec including the image recompression pipeline, frontend state machine, 40 ACs)
+- `docs/adr/006-sharp-image-recompression.md` — Decision: pdf-lib + Sharp for image recompression (rejected pdf-lib-only for insufficient compression, rejected Ghostscript for reversing ADR-001's system-dependency/AGPL rejection)
+- `prisma/schema.prisma` — added `COMPRESS` to `JobType` enum, added `CompressionLevel` enum (`LOW | RECOMMENDED | HIGH`), added `Job.compressionLevel: CompressionLevel?`; migration `20260701060835_add_compress_job_type` applied
+- `packages/shared/src/types/job.ts` — added `JobType.COMPRESS`, `CompressionLevel` enum, and `CompressJobPayload` type
+- 5-session implementation breakdown (Sessions 018–022)
+- Risk flagged for Session 020: exact low-level pdf-lib API for mutating image XObject stream bytes needs a proof-of-concept spike before the full processor is written
+
+---
+
 ## [0.2.2] — 2026-07-01
 
 ### Changed

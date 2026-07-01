@@ -8,6 +8,13 @@ export enum JobStatus {
 export enum JobType {
   MERGE = 'MERGE',
   SPLIT = 'SPLIT',
+  COMPRESS = 'COMPRESS',
+}
+
+export enum CompressionLevel {
+  LOW = 'LOW',
+  RECOMMENDED = 'RECOMMENDED',
+  HIGH = 'HIGH',
 }
 
 export interface MergeJobPayload {
@@ -19,4 +26,10 @@ export interface SplitJobPayload {
   jobId: string
   inputKey: string
   ranges: string
+}
+
+export interface CompressJobPayload {
+  jobId: string
+  inputKey: string
+  level: CompressionLevel
 }
