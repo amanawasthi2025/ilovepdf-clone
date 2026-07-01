@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [0.2.2] — 2026-07-01
+
+### Changed
+
+**Session 017 — Remove CI/CD and CodeRabbit (2026-07-01)**
+- Removed `.github/workflows/ci.yml`, `.github/workflows/process-coderabbit.yml`, `.coderabbit.yaml`, and the now-empty `.github/` directory — see ADR-005
+- Updated `develop`/`master` GitHub branch protection: dropped the required "Typecheck, Lint & Test" status check and set required approving reviews to 0; a PR is still required to merge, no force-pushes/deletions allowed
+- `CLAUDE.md`, `PROJECT.md`, `wiki/development-workflow.md`, `wiki/testing-strategy.md` updated to describe manual, local quality gates (`npm run typecheck`/`lint`/`test`, `npx playwright test`) run before opening and before merging every PR, replacing the automated CI/CodeRabbit gates
+- No application code changes
+
 ## [0.2.1] — 2026-07-01
 
 ### Changed

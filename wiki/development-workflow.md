@@ -1,7 +1,7 @@
 # Wiki: Development Workflow
 
 > Describes how we move from "feature idea" to "merged and documented."
-> Designed for a solo developer working with Claude Code and CodeRabbit.
+> Designed for a solo developer working with Claude Code. No CI, no automated review — see ADR-005.
 
 ---
 
@@ -15,7 +15,7 @@ Every feature follows this exact cycle. No shortcuts.
 3. IMPLEMENT  → Build the feature as a complete vertical slice
 4. TEST       → Write and run all tests
 5. DOCUMENT   → Update TASKS.md, CHANGELOG.md, wiki/, session-notes/
-6. REVIEW     → Open PR, CodeRabbit reviews, address findings
+6. REVIEW     → Open PR, run local quality gates, self-review against acceptance criteria
 7. MERGE      → Merge to develop
 8. APPROVE    → Human approves; next feature is assigned
 ```
@@ -101,19 +101,11 @@ Every feature becomes a PR from `feature/<name>` → `develop`.
    - What the feature does
    - How to test it manually
    - Any known limitations or follow-up work
-3. CodeRabbit will automatically review the PR.
-
-### Responding to CodeRabbit
-
-For each finding CodeRabbit raises:
-
-- **Accept and fix:** Make the change in a follow-up commit, reply to the comment.
-- **Reject:** Reply with a clear explanation of why the finding doesn't apply or was intentionally chosen differently. Document significant rejections in `wiki/lessons-learned.md`.
+3. Self-review the diff against the feature's acceptance criteria before merging — there is no automated reviewer.
 
 ### Merge Requirements
 
-- [ ] All CI checks passing (lint, typecheck, tests, build)
-- [ ] CodeRabbit review addressed (all accepted findings fixed)
+- [ ] All local quality gates passing on the PR branch (`npm run typecheck`, `npm run lint`, `npm run test`) — no CI runs these automatically
 - [ ] Documentation updated in the same PR
 - [ ] At least one manual test run documented in the PR description
 
@@ -145,21 +137,18 @@ git push origin v0.1.0
 
 ---
 
-## CI Pipeline (GitHub Actions)
+## Local Quality Gates
 
-Every push to any branch triggers:
+There is no CI (see ADR-005). The same checks CI used to run are run by hand, before opening a PR and again before merging it:
 
+```bash
+npm run typecheck   # tsc --noEmit, all workspaces
+npm run lint         # ESLint, all workspaces
+npm run test         # Vitest, all workspaces
+npx playwright test  # E2E, against a locally running stack (apps/web)
 ```
-1. Install dependencies
-2. TypeScript typecheck (tsc --noEmit)
-3. Lint (ESLint)
-4. Unit + integration tests (Vitest)
-5. Build (next build)
-```
 
-E2E tests (Playwright) are run manually against a locally running stack — see below. They are not currently part of the automated CI pipeline.
-
-The pipeline must be green before merge. No exceptions.
+All four must be green before merge. No exceptions — this is the only thing standing between broken code and `develop` now that there's no automated gate.
 
 ---
 
@@ -229,4 +218,4 @@ At the end of every Claude Code session:
 
 ---
 
-*Last updated: 2026-07-01 — Session 016 (Remove Docker, Native Local Dev)*
+*Last updated: 2026-07-01 — Session 017 (CI/CD and CodeRabbit removed, native local dev only)*

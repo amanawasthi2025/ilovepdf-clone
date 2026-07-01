@@ -208,11 +208,12 @@ npm run test:unit -- --watch
 
 ---
 
-## CI Test Execution
+## Local Test Execution
 
-- **Every push:** Unit tests + TypeScript typecheck + lint
-- **Every PR:** All of the above + integration tests + build
-- **Every PR to `main`:** All of the above + E2E tests
+There is no CI (see ADR-005) — all of the below are run manually, by hand, before opening a PR and again before merging it:
+
+- **Before every PR:** Unit + integration tests, TypeScript typecheck, lint
+- **Before every PR to `master`:** All of the above + E2E tests
 
 ---
 
@@ -233,4 +234,4 @@ A test is bad if:
 
 ---
 
-*Last updated: 2026-07-01 — Session 016 (Remove Docker, Native Local Dev)*
+*Last updated: 2026-07-01 — Session 017 (CI/CD and CodeRabbit removed, native local dev only)*
