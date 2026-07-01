@@ -5,12 +5,13 @@
 
 ---
 
-## Current Feature: Job History
+## Completed Feature: Job History
 
-**Status:** IN PROGRESS (Session 029 of 030 complete)
+**Status:** COMPLETE ✅
 **Started:** 2026-07-01
+**Completed:** 2026-07-01
 **Branch:** `feature/job-history`
-**Sessions:** 027 (planning) ✅ → 028 (schema/association/ownership) ✅ → 029 (frontend) ✅ → 030 (remaining)
+**Sessions:** 027 (planning) ✅ → 028 (schema/association/ownership) ✅ → 029 (frontend) ✅ → 030 (E2E/DoD) ✅
 
 ---
 
@@ -150,7 +151,7 @@ No new REST endpoint is introduced — nothing else needs this data yet (YAGNI),
 
 - [x] AC-01: A job submitted while logged in has its `Job.userId` set to that user's id
 - [x] AC-02: A job submitted while logged out has `Job.userId` null — unchanged from today
-- [ ] AC-03: A user's history never includes jobs created before this feature shipped, or jobs created while logged out (no retroactive claiming) — history query already scopes to `userId`, which is `null` for such jobs; formal E2E confirmation is Session 030
+- [x] AC-03: A user's history never includes jobs created before this feature shipped, or jobs created while logged out (no retroactive claiming) — history query already scopes to `userId`, which is `null` for such jobs; formally confirmed by a Session 030 Playwright E2E test seeding an anonymous job and another user's job and asserting neither appears
 
 ### Authorization
 
@@ -172,18 +173,18 @@ No new REST endpoint is introduced — nothing else needs this data yet (YAGNI),
 
 ### Anonymous Tools Unaffected
 
-- [ ] AC-16: `/merge` functions identically whether the visitor is logged in or logged out
-- [ ] AC-17: `/split` functions identically whether the visitor is logged in or logged out
-- [ ] AC-18: `/compress` functions identically whether the visitor is logged in or logged out
-- [ ] AC-19: All pre-existing Merge/Split/Compress unit, integration, and E2E tests continue to pass unmodified
+- [x] AC-16: `/merge` functions identically whether the visitor is logged in or logged out — verified via the AC-23 E2E test (full logged-in flow) plus the pre-existing anonymous `merge.spec.ts`
+- [x] AC-17: `/split` functions identically whether the visitor is logged in or logged out — verified via a logged-in full-flow browser check plus the pre-existing anonymous `split.spec.ts`
+- [x] AC-18: `/compress` functions identically whether the visitor is logged in or logged out — verified via a logged-in full-flow browser check plus the pre-existing anonymous `compress.spec.ts`
+- [x] AC-19: All pre-existing Merge/Split/Compress unit, integration, and E2E tests continue to pass unmodified — 152 web + 16 worker unit tests and all 16 E2E specs green
 
 ### Quality
 
 - [x] AC-20: `npm run typecheck` exits with 0 errors
 - [x] AC-21: `npm run lint` exits with 0 errors/warnings
 - [x] AC-22: `npm run test` passes all unit and integration tests
-- [ ] AC-23: Playwright E2E test passes: submit a job while logged in → job appears in `/history` with correct type/status → download succeeds
-- [ ] AC-24: Playwright E2E test passes: `/history` redirects to `/login` when logged out; a job owned by one user returns `403` when its status/download endpoint is requested using a different user's session
+- [x] AC-23: Playwright E2E test passes: submit a job while logged in → job appears in `/history` with correct type/status → download succeeds
+- [x] AC-24: Playwright E2E test passes: `/history` redirects to `/login` when logged out; a job owned by one user returns `403` when its status/download endpoint is requested using a different user's session
 
 ---
 
@@ -207,7 +208,16 @@ No open questions remain that block implementation.
 | 027 | Planning, ADR-008 & Acceptance Criteria | COMPLETE ✅ |
 | 028 | Schema (`Job.userId`) + Association (upload routes) + Ownership Enforcement (status/download routes) | COMPLETE ✅ |
 | 029 | Frontend: `/history` page, nav "History" link | COMPLETE ✅ |
-| 030 | E2E Tests, Polish & Definition of Done | Not started |
+| 030 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
+
+---
+
+## Implementation Notes (Session 030)
+
+- `apps/web/e2e/history.spec.ts` — three new Playwright specs against the real stack (native Postgres/Redis/MinIO per ADR-004, `next dev`, worker's `npm run dev`): AC-23's full flow (signup → login → submit a real Merge job → `/history` shows it as `Merge`/`COMPLETED` → Download control produces a valid PDF), AC-03/AC-14's negative case (an anonymous job and another user's job, both seeded directly via Prisma, never appear in a third user's history — asserted via the empty-state message), and AC-24's authorization case (logged-out `/history` redirects to `/login`; a job seeded for one user returns `403 JOB_ACCESS_DENIED` from both the status and download endpoints when requested via a different, isolated browser context's session).
+- AC-16–AC-18 (anonymous tools unaffected) were confirmed two ways: the AC-23 test exercises `/merge` fully logged-in end-to-end, and two throwaway (uncommitted) Playwright scripts drove `/split` and `/compress` logged-in through their full upload → process → download flows — both completed identically to their existing anonymous E2E specs. Combined with the fact that all three upload routes and all six status/download routes share byte-for-byte identical `auth()`/`userId` guard code (confirmed by direct inspection), and Session 028's unit tests already assert the association/ownership logic per job type, no new permanent per-tool E2E specs were added — would have duplicated coverage the anonymous specs and the shared code path already provide (YAGNI).
+- Ran the full Definition of Done checklist against the real local stack: `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (152 web + 16 worker, all passing), `npx playwright test` (16/16 — 3 new history specs + 13 pre-existing Merge/Split/Compress/Auth specs, no regressions). Running the full E2E suite with Playwright's default multi-worker parallelism produced 2 flaky failures (`compress.spec.ts` High level, `split.spec.ts` full flow) caused by resource contention between concurrent browser instances and the worker's fixed `WORKER_CONCURRENCY=2`, not a real regression — confirmed by a clean 16/16 pass with `--workers=1`.
+- All 24 acceptance criteria are now verified. Job History is feature-complete.
 
 ---
 

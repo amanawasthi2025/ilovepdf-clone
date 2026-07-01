@@ -7,10 +7,16 @@
 
 ## Current Feature
 
+**Status:** None — awaiting approval for the next feature (per the One-Feature-at-a-Time Rule)
+
+---
+
+## Previous Feature (Approved)
+
 **Feature:** Job History
-**Status:** IN PROGRESS
+**Status:** COMPLETE ✅
 **Branch:** `feature/job-history`
-**Started:** 2026-07-01
+**Completed:** 2026-07-01
 **Spec:** `wiki/active-feature.md`
 
 ### Description
@@ -22,10 +28,10 @@ Allow a logged-in user to see a list of their submitted Merge/Split/Compress job
 | 027 | Planning, ADR-008 & Acceptance Criteria | COMPLETE ✅ |
 | 028 | Schema (`Job.userId`) + Association + Ownership Enforcement | COMPLETE ✅ |
 | 029 | Frontend: `/history` page, nav "History" link | COMPLETE ✅ |
-| 030 | E2E Tests, Polish & Definition of Done | Not started |
+| 030 | E2E Tests, Polish & Definition of Done | COMPLETE ✅ |
 
 ### Acceptance Criteria
-24 criteria defined — see `wiki/active-feature.md`. AC-01, AC-02, AC-04–AC-15, AC-20–AC-22 verified. AC-03, AC-16–AC-19, AC-23, AC-24 pending Session 030.
+All 24 criteria verified — see `wiki/active-feature.md`.
 
 ### Notes
 - Session 029 also fixed a pre-existing bug in `lib/auth.ts` (missing `jwt`/`session` callbacks meant `session.user.id` was never populated at runtime) found during manual browser verification — see `wiki/lessons-learned.md`. This was silently breaking Session 028's association/ownership mechanism in production despite its unit tests passing.
@@ -136,6 +142,7 @@ None.
 | 2 | PDF Split | 2026-07-01 | Custom ranges, ZIP output; 38 ACs; 75 unit tests + 4 E2E |
 | 3 | PDF Compress | 2026-07-01 | pdf-lib + Sharp image recompression, 3 levels; 40 ACs; 104 unit tests + 11 E2E |
 | 4 | User Authentication | 2026-07-01 | Auth.js v5 + Credentials provider, JWT sessions; signup/login/logout, session-aware nav; 28 ACs; 124 unit tests (108 web + 16 worker) + 13 E2E (13/13 monorepo-wide) |
+| 5 | Job History | 2026-07-01 | Automatic job-user association, per-owner authorization on status/download, `/history` page; 24 ACs; 168 unit tests (152 web + 16 worker) + 16 E2E (16/16 monorepo-wide) |
 
 ---
 
@@ -161,11 +168,11 @@ None.
 
 ## Notes
 
-- Merge, Split, Compress, and User Authentication are all complete.
-- Job History is now the Current Feature (planning complete, Session 027) — see above.
+- Merge, Split, Compress, User Authentication, and Job History are all complete.
+- No Current Feature is in progress — awaiting explicit approval before starting the next one (per the One-Feature-at-a-Time Rule).
 - Items 4–5 require LibreOffice headless — architectural complexity increases there.
 - Items 6+ require payment infrastructure — significant scope jump.
 
 ---
 
-*Last updated: 2026-07-01 — Session 029 (Job History: Frontend `/history` page, nav "History" link)*
+*Last updated: 2026-07-01 — Session 030 (Job History: E2E Tests, Polish & Definition of Done — feature COMPLETE)*

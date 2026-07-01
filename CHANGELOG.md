@@ -9,7 +9,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.5.0] — 2026-07-01
 
-### Added (Job History — In Progress)
+### Added (Job History)
+
+**Session 030 — E2E Tests, Polish & Definition of Done (2026-07-01)**
+- `apps/web/e2e/history.spec.ts` — 3 new Playwright specs against the real stack: full logged-in flow (submit a Merge job → appears in `/history` as `COMPLETED` → Download control produces a valid PDF, AC-23); a negative case seeding an anonymous job and another user's job directly via Prisma and asserting neither leaks into a third user's history (AC-03/AC-14); and a cross-user authorization case (`/history` redirects to `/login` when logged out; status/download return `403 JOB_ACCESS_DENIED` for a job requested with a different user's session, AC-24)
+- AC-16–AC-18 (Merge/Split/Compress unaffected by login state) confirmed: the AC-23 test drives `/merge` fully logged-in end-to-end, and ad-hoc logged-in runs of `/split` and `/compress` completed identically to their existing anonymous E2E specs — no new permanent per-tool specs added since all three upload/status/download routes share identical guard code already covered by Session 028's unit tests (YAGNI)
+- `npm run typecheck` (0 errors), `npm run lint` (0 warnings/errors), `npm run test` (152 web + 16 worker, all passing), `npx playwright test --workers=1` (16/16 — 3 new history specs + 13 pre-existing Merge/Split/Compress/Auth specs, no regressions)
+- All 24 acceptance criteria verified. Job History is feature-complete — see `wiki/completed-features.md`
 
 **Session 029 — Frontend: `/history` page, nav "History" link (2026-07-01)**
 - `apps/web/app/history/page.tsx` — new Server Component; redirects to `/login` when unauthenticated (via `next/navigation`'s `redirect()`); otherwise queries `prisma.job.findMany` for the current user's jobs (most recent 50, newest first) and renders job type, status, created date, a `FAILED` job's error message, and a `COMPLETED` job's `DownloadButton`
