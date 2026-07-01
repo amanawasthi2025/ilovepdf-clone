@@ -10,7 +10,7 @@
 **Status:** IN PROGRESS
 **Started:** 2026-07-01
 **Branch:** `feature/pdf-to-image`
-**Sessions:** 031 (planning), 032 (schema + worker + API routes) ← you are here
+**Sessions:** 031 (planning), 032 (schema + worker + API routes), 033 (frontend + route-slug fix) ← you are here
 
 ---
 
@@ -129,6 +129,7 @@ The existing Server Component (`apps/web/app/history/page.tsx`) queries `prisma.
 ### Nav / Home page
 
 - No new nav link (Merge/Split/Compress aren't in the nav either — tool pages are reached via the home page's tool list). The home page gains a link/card for `/pdf-to-image` alongside the existing three, matching whatever pattern already lists them there.
+- **Correction (Session 033):** "the existing three" turned out not to exist — `apps/web/app/page.tsx` was still Project Init's placeholder (`Coming soon.`, no links at all); a repo-wide grep confirmed no file ever linked `/merge`, `/split`, or `/compress`. Surfaced to the user before coding; decision was to fix the home page properly rather than add a single inconsistent link — `page.tsx` now renders all four tool cards.
 
 ---
 
@@ -153,25 +154,25 @@ The existing Server Component (`apps/web/app/history/page.tsx`) queries `prisma.
 
 ### History Integration
 
-- [ ] AC-12: A `PDF_TO_IMAGE` job submitted while logged in appears in `/history` with correct type, status, and created date — no `/history` page code changes required beyond the download-button fix
-- [ ] AC-13: The `/history` Download control for a `COMPLETED` `PDF_TO_IMAGE` job successfully downloads the correct output ZIP (validates the route-slug fix)
+- [x] AC-12: A `PDF_TO_IMAGE` job submitted while logged in appears in `/history` with correct type, status, and created date — no `/history` page code changes required beyond the download-button fix
+- [x] AC-13: The `/history` Download control for a `COMPLETED` `PDF_TO_IMAGE` job successfully downloads the correct output ZIP (validates the route-slug fix)
 
 ### Frontend
 
-- [ ] AC-14: `/pdf-to-image` accepts a PDF upload, a format selection, and completes the full IDLE → UPLOADING → PROCESSING → DONE flow with a working download
-- [ ] AC-15: An unsupported/invalid file shows a clear inline error, without a page crash, same pattern as the other tool pages
-- [ ] AC-16: The home page links to `/pdf-to-image` alongside the existing three tools
+- [x] AC-14: `/pdf-to-image` accepts a PDF upload, a format selection, and completes the full IDLE → UPLOADING → PROCESSING → DONE flow with a working download
+- [x] AC-15: An unsupported/invalid file shows a clear inline error, without a page crash, same pattern as the other tool pages
+- [x] AC-16: The home page links to `/pdf-to-image` alongside the existing three tools
 
 ### Anonymous Use Unaffected
 
-- [ ] AC-17: `/pdf-to-image` functions identically whether the visitor is logged in or logged out
+- [x] AC-17: `/pdf-to-image` functions identically whether the visitor is logged in or logged out
 - [x] AC-18: All pre-existing Merge/Split/Compress/Auth/Job History unit, integration, and E2E tests continue to pass unmodified
 
 ### Quality
 
-- [ ] AC-19: `npm run typecheck` exits with 0 errors
-- [ ] AC-20: `npm run lint` exits with 0 errors/warnings
-- [ ] AC-21: `npm run test` passes all unit and integration tests
+- [x] AC-19: `npm run typecheck` exits with 0 errors
+- [x] AC-20: `npm run lint` exits with 0 errors/warnings
+- [x] AC-21: `npm run test` passes all unit and integration tests
 - [ ] AC-22: Playwright E2E test passes: upload a PDF, select a format, download the resulting ZIP, and verify it contains the expected number of correctly-formatted page images
 - [ ] AC-23: Playwright E2E test passes: a `PDF_TO_IMAGE` job submitted while logged in appears in `/history` and its Download control succeeds (validates the route-slug fix end-to-end)
 
@@ -196,7 +197,7 @@ No open questions remain that block implementation.
 |---|---|---|
 | 031 | Planning, ADR-009 & Acceptance Criteria | COMPLETE ✅ |
 | 032 | Schema (`JobType.PDF_TO_IMAGE`, `ImageFormat`) + Worker Processor + API Routes | COMPLETE ✅ |
-| 033 | Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix | Not started |
+| 033 | Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix | COMPLETE ✅ |
 | 034 | E2E Tests, Polish & Definition of Done | Not started |
 
 ---

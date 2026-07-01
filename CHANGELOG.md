@@ -11,6 +11,15 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added (PDF to Image)
 
+**Session 033 — Frontend: `/pdf-to-image` page + `download-button.tsx` route-slug fix (2026-07-01)**
+- `apps/web/app/pdf-to-image/page.tsx` + `validation.ts` (+ `validation.test.ts`) — new tool page mirroring `/compress`'s structure exactly: dropzone upload, PNG/JPEG format selector (radio group), IDLE → UPLOADING → PROCESSING → DONE/ERROR flow with 2s status polling, ZIP download on completion
+- `apps/web/app/history/download-button.tsx` — fixed the latent route-slug bug identified in Session 031: replaced the naive `jobType.toLowerCase()` derivation with an explicit `JOB_TYPE_ROUTE_SLUGS: Record<JobType, string>` map (`PDF_TO_IMAGE` → `'pdf-to-image'`), so the Download control resolves the correct kebab-case route for multi-word job types; added a regression test asserting the mapping
+- **Ambiguity surfaced and resolved with the user before coding:** `wiki/active-feature.md`/AC-16 assumed the home page already linked Merge/Split/Compress ("alongside the existing three tools") — it didn't; `apps/web/app/page.tsx` was still the placeholder `Coming soon.` text from Project Init, and a repo-wide grep confirmed no `.tsx`/`.ts` file ever linked `/merge`, `/split`, or `/compress`. User chose to fix the home page properly rather than leave the inconsistency: `apps/web/app/page.tsx` now renders four tool cards (Merge/Split/Compress/PDF to Image) instead of the placeholder, with `page.test.tsx` asserting all four links
+- Manually verified end-to-end against the real local stack (native Postgres/Redis/MinIO, `next dev` + worker, restarted with `.env` properly loaded — the previously-running `next dev` process had been started without it, surfaced by a real `500` on first verification attempt): home page → `/pdf-to-image` card → upload → JPEG conversion → ZIP download (3 pages → `page-1.jpg`…`page-3.jpg`); separately, signup → login → submit a PDF to Image job → appears in `/history` as `PDF_TO_IMAGE`/`COMPLETED` → Download control succeeds (validates the route-slug fix live, AC-12/AC-13)
+- 10 new unit tests (7 `validation.test.ts` + 1 `page.test.tsx` + 1 `download-button.test.tsx` route-slug case; no new test file needed for `pdf-to-image/page.tsx` itself, matching the existing pattern where Merge/Split/Compress page components are covered by E2E rather than component tests)
+- `npm run typecheck` (0 errors), `npm run lint` (0 errors/warnings), `npm run test` (187 web + 21 worker, all passing, no regressions)
+- Covers AC-12–AC-17 of the PDF to Image spec; AC-19–AC-23 (quality gates already green above; Playwright E2E specs) remain for Session 034
+
 **Session 032 — Schema + Worker Processor + API Routes (2026-07-01)**
 - `prisma/schema.prisma` — `JobType` gains `PDF_TO_IMAGE`; new `ImageFormat` enum (`PNG`/`JPEG`); `Job` gains nullable `imageFormat`. Migration `20260701114002_add_pdf_to_image_job_type` applied.
 - `packages/shared` — `ImageFormat` enum, `PdfToImageJobPayload`, `JobType.PDF_TO_IMAGE` added and exported.

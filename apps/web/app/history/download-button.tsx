@@ -8,13 +8,20 @@ type Props = {
   jobType: JobType
 }
 
+const JOB_TYPE_ROUTE_SLUGS: Record<JobType, string> = {
+  [JobType.MERGE]: 'merge',
+  [JobType.SPLIT]: 'split',
+  [JobType.COMPRESS]: 'compress',
+  [JobType.PDF_TO_IMAGE]: 'pdf-to-image',
+}
+
 export default function DownloadButton({ jobId, jobType }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   async function handleDownload() {
     setError(null)
     try {
-      const res = await fetch(`/api/${jobType.toLowerCase()}/jobs/${jobId}/download`)
+      const res = await fetch(`/api/${JOB_TYPE_ROUTE_SLUGS[jobType]}/jobs/${jobId}/download`)
       if (!res.ok) {
         setError('Download failed. Please try again.')
         return
